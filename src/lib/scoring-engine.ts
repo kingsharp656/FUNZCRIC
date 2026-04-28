@@ -80,7 +80,7 @@ export function applyBall(prev: InningsState, ball: BallInput): BallOutcome {
 
   // Strike rotation: odd batter runs swap. Byes/leg byes also rotate on odd.
   const rotateRuns =
-    ball.extra === "bye" || ball.extra === "leg_bye"
+    ball.extra === "bye" || ball.extra === "leg_bye" || ball.extra === "wide"
       ? extraRuns
       : ball.runs ?? 0;
   if (rotateRuns % 2 === 1) {

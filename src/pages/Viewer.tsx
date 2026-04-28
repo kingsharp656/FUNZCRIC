@@ -184,6 +184,7 @@ function recentOverBalls(balls: any[]) {
   return out;
 }
 function ballLabel(b: any) {
+  if (b.extra_type === "wide" && b.is_wicket) return `Wd${b.extra_runs > 1 ? `+${b.extra_runs - 1}` : ""}W`;
   if (b.is_wicket) return "W";
   if (b.extra_type === "wide") return `Wd${b.extra_runs > 1 ? `+${b.extra_runs - 1}` : ""}`;
   if (b.extra_type === "no_ball") return `Nb${b.runs ? `+${b.runs}` : ""}`;

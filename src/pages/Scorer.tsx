@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { BrandHeader } from "@/components/BrandHeader";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -48,6 +49,8 @@ const Scorer = () => {
   const [byeRuns, setByeRuns] = useState(1);
   const [wideOpen, setWideOpen] = useState(false);
   const [wideRuns, setWideRuns] = useState(1);
+  const [wideWicket, setWideWicket] = useState(false);
+  const [wideNewBatter, setWideNewBatter] = useState("");
 
   // Load + subscribe
   const load = useCallback(async () => {
@@ -150,6 +153,15 @@ const Scorer = () => {
         : availableIncomingBatters[0]?.name || "",
     );
   }, [wicketOpen, innings, availableIncomingBatters]);
+
+  useEffect(() => {
+    if (!wideOpen || !innings || !wideWicket) return;
+    setWideNewBatter((current) =>
+      availableIncomingBatters.some((player) => namesEqual(player.name, current))
+        ? current
+        : availableIncomingBatters[0]?.name || "",
+    );
+  }, [wideOpen, wideWicket, innings, availableIncomingBatters]);
 
   useEffect(() => {
     if (!overBowlerOpen) return;
@@ -463,6 +475,8 @@ const Scorer = () => {
                   className="scoring-btn h-14"
                   onClick={() => {
                     setWideRuns(1);
+                    setWideWicket(false);
+                    setWideNewBatter("");
                     setWideOpen(true);
                   }}
                 >
@@ -649,14 +663,50 @@ const Scorer = () => {
       <Dialog open={wideOpen} onOpenChange={setWideOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Wide — total runs on this ball?</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-5 gap-2">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <Button key={n} variant={wideRuns === n ? "default" : "outline"} className="h-14" onClick={() => setWideRuns(n)}>{n}</Button>
-            ))}
+          <div className="space-y-4">
+            <div className="grid grid-cols-5 gap-2">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Button key={n} variant={wideRuns === n ? "default" : "outline"} className="h-14" onClick={() => setWideRuns(n)}>{n}</Button>
+              ))}
+            </div>
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <Checkbox
+                id="wide-stumped"
+                checked={wideWicket}
+                onCheckedChange={(checked) => setWideWicket(checked === true)}
+              />
+              <Label htmlFor="wide-stumped" className="cursor-pointer">
+                Stumped wicket on this wide
+              </Label>
+            </div>
+            {wideWicket && requiresReplacementBatter && (
+              <div className="space-y-2">
+                <Label>New batter walking in</Label>
+                <Select value={wideNewBatter} onValueChange={setWideNewBatter}>
+                  <SelectTrigger><SelectValue placeholder="Select next batter" /></SelectTrigger>
+                  <SelectContent>
+                    {availableIncomingBatters.map((player) => (
+                      <SelectItem key={`wide-new-batter-${player.name}`} value={player.name}>{displayName(player.name)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button onClick={async () => {
-              await score({ extra: "wide", extra_runs: wideRuns });
+              if (wideWicket && requiresReplacementBatter && !wideNewBatter.trim()) {
+                toast.error("Select the new batter");
+                return;
+              }
+              await score({
+                extra: "wide",
+                extra_runs: wideRuns,
+                is_wicket: wideWicket,
+                wicket_type: wideWicket ? "stumped" : undefined,
+                out_player: wideWicket ? innings.striker : undefined,
+                new_batter: wideWicket && requiresReplacementBatter ? wideNewBatter.trim() : undefined,
+              });
               setWideOpen(false);
             }}>Confirm</Button>
           </DialogFooter>
@@ -709,6 +759,7 @@ function getTeamSquad(match: Match | null, teamName?: string | null): TeamPlayer
   return [];
 }
 function ballLabel(b: any) {
+  if (b.extra_type === "wide" && b.is_wicket) return `Wd${b.extra_runs > 1 ? `+${b.extra_runs - 1}` : ""}W`;
   if (b.is_wicket) return "W";
   if (b.extra_type === "wide") return `Wd${b.extra_runs > 1 ? `+${b.extra_runs - 1}` : ""}`;
   if (b.extra_type === "no_ball") return `Nb${b.runs ? `+${b.runs}` : ""}`;
