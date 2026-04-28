@@ -277,30 +277,112 @@ const Scorer = () => {
   };
 
   const undoLast = async () => {
-    if (balls.length === 0) return;
-    const last = balls[balls.length - 1];
-    if (last.innings_number !== innings?.innings_number) {
-      toast.error("Cannot undo across innings");
+    if (!match || !innings) return;
+
+    const currentBalls = balls
+      .filter((ball) => ball.innings_number === innings.innings_number)
+      .sort((left, right) => left.created_at.localeCompare(right.created_at));
+
+    let targetInningsNumber = innings.innings_number;
+    let targetBalls = currentBalls;
+    let revertToFirstInnings = false;
+
+    if (targetBalls.length === 0 && innings.innings_number === 2) {
+      const firstInningsBalls = balls
+        .filter((ball) => ball.innings_number === 1)
+        .sort((left, right) => left.created_at.localeCompare(right.created_at));
+      if (firstInningsBalls.length === 0) {
+        toast.error("Nothing to undo");
+        return;
+      }
+      targetInningsNumber = 1;
+      targetBalls = firstInningsBalls;
+      revertToFirstInnings = true;
+    }
+
+    if (targetBalls.length === 0) {
+      toast.error("Nothing to undo");
       return;
     }
-    // delete last ball, recompute state from scratch
-    await supabase.from("balls").delete().eq("id", last.id);
-    const remaining = balls.slice(0, -1).filter((b) => b.innings_number === innings.innings_number);
-    // Replay won't track names properly, so just adjust totals from remaining balls:
-    let runs = 0, wickets = 0, legal = 0, extras = 0;
-    for (const b of remaining) {
-      if (b.extra_type === "wide" || b.extra_type === "no_ball") {
-        runs += b.extra_runs + (b.extra_type === "no_ball" ? b.runs : 0);
-        extras += b.extra_runs;
-      } else if (b.extra_type === "bye" || b.extra_type === "leg_bye") {
-        runs += b.extra_runs; extras += b.extra_runs;
-      } else { runs += b.runs; }
-      if (b.is_legal) legal += 1;
-      if (b.is_wicket) wickets += 1;
+
+    const lastBall = targetBalls[targetBalls.length - 1];
+    const { error: deleteError } = await supabase.from("balls").delete().eq("id", lastBall.id);
+    if (deleteError) {
+      toast.error(deleteError.message || "Could not undo the last ball");
+      return;
     }
-    await supabase.from("innings_state").update({
-      runs, wickets, balls: legal, extras,
-    }).eq("id", innings.id);
+
+    const remainingBalls = targetBalls.slice(0, -1);
+    const initialState = remainingBalls.length > 0
+      ? {
+          runs: 0,
+          wickets: 0,
+          balls: 0,
+          extras: 0,
+          striker: targetBalls[0].striker || "",
+          non_striker: targetBalls[0].non_striker || "",
+          bowler: targetBalls[0].bowler || "",
+        }
+      : {
+          runs: 0,
+          wickets: 0,
+          balls: 0,
+          extras: 0,
+          striker: lastBall.striker || "",
+          non_striker: lastBall.non_striker || "",
+          bowler: lastBall.bowler || "",
+        };
+
+    let rebuiltState = initialState;
+    for (const ball of remainingBalls) {
+      rebuiltState = applyBall(rebuiltState, {
+        runs: ball.runs,
+        extra: ball.extra_type as ExtraType,
+        extra_runs: ball.extra_runs,
+        is_wicket: ball.is_wicket,
+        wicket_type: ball.wicket_type as WicketType,
+        out_player: ball.out_player || undefined,
+      }).state;
+    }
+
+    const { error: updateInningsError } = await supabase.from("innings_state").update({
+      runs: rebuiltState.runs,
+      wickets: rebuiltState.wickets,
+      balls: rebuiltState.balls,
+      extras: rebuiltState.extras,
+      striker: rebuiltState.striker,
+      non_striker: rebuiltState.non_striker,
+      bowler: rebuiltState.bowler,
+      is_complete: false,
+    }).eq("match_id", match.id).eq("innings_number", targetInningsNumber);
+
+    if (updateInningsError) {
+      toast.error(updateInningsError.message || "Could not undo the last ball");
+      return;
+    }
+
+    if (revertToFirstInnings) {
+      const { error: deleteSecondInningsError } = await supabase
+        .from("innings_state")
+        .delete()
+        .eq("match_id", match.id)
+        .eq("innings_number", 2);
+      if (deleteSecondInningsError) {
+        toast.error(deleteSecondInningsError.message || "Could not restore the first innings");
+        return;
+      }
+
+      const { error: updateMatchError } = await supabase.from("matches").update({
+        current_innings: 1,
+        status: match.status === "ended" ? "live" : match.status,
+      }).eq("id", match.id);
+      if (updateMatchError) {
+        toast.error(updateMatchError.message || "Could not restore the match state");
+        return;
+      }
+    }
+
+    await load();
     toast.success("Last ball undone");
   };
 
