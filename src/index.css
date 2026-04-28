@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* FunzQuick Cric Scoring — design system
+   All colors HSL. Inspired by the FunzQuick logo: deep navy, electric green, ball red. */
+
+@layer base {
+  :root {
+    /* Surfaces */
+    --background: 222 60% 8%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 55% 11%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 55% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Brand primary — FunzQuick navy/blue */
+    --primary: 220 85% 52%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 215 95% 65%;
+
+    /* Brand accent — electric green from the "Quick" lettering */
+    --accent: 95 75% 55%;
+    --accent-foreground: 222 60% 8%;
+    --accent-glow: 100 80% 65%;
+
+    /* Ball red */
+    --ball: 358 78% 52%;
+    --ball-foreground: 0 0% 100%;
+
+    /* Admin gold (for Sunandan Singh) */
+    --gold: 43 95% 58%;
+    --gold-glow: 48 100% 70%;
+
+    --secondary: 222 40% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 222 35% 16%;
+    --muted-foreground: 215 20% 70%;
+
+    --destructive: 358 78% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 222 40% 20%;
+    --input: 222 40% 18%;
+    --ring: 220 85% 52%;
+
+    --radius: 0.875rem;
+
+    /* Gradients */
+    --gradient-hero: radial-gradient(ellipse at top, hsl(220 85% 22%) 0%, hsl(222 60% 8%) 60%);
+    --gradient-brand: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-glow)) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(var(--accent-glow)) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(var(--gold)) 0%, hsl(var(--gold-glow)) 100%);
+    --gradient-pitch: linear-gradient(180deg, hsl(222 55% 12%) 0%, hsl(222 60% 8%) 100%);
+
+    /* Shadows */
+    --shadow-brand: 0 10px 40px -10px hsl(var(--primary) / 0.5);
+    --shadow-accent: 0 10px 40px -10px hsl(var(--accent) / 0.5);
+    --shadow-gold: 0 0 24px hsl(var(--gold) / 0.55);
+    --shadow-card: 0 8px 30px -8px hsl(0 0% 0% / 0.5);
+
+    /* Transitions */
+    --tx-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --tx-bounce: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    --sidebar-background: 222 55% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 220 85% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 40% 18%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 222 40% 20%;
+    --sidebar-ring: 220 85% 52%;
+  }
+
+  .dark {
+    /* same as :root — app is dark-first */
+    --background: 222 60% 8%;
+    --foreground: 210 40% 98%;
+    --card: 222 55% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 55% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 220 85% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 40% 18%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 222 35% 16%;
+    --muted-foreground: 215 20% 70%;
+    --accent: 95 75% 55%;
+    --accent-foreground: 222 60% 8%;
+    --destructive: 358 78% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 40% 20%;
+    --input: 222 40% 18%;
+    --ring: 220 85% 52%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+    background-image: var(--gradient-hero);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  h1, h2, h3, .display { font-family: 'Bebas Neue', Impact, sans-serif; letter-spacing: 0.02em; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+}
+
+@layer components {
+  .gold-name {
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 700;
+    text-shadow: 0 0 18px hsl(var(--gold) / 0.45);
+    filter: drop-shadow(0 1px 0 hsl(var(--gold) / 0.6));
+  }
+  .glass {
+    background: hsl(var(--card) / 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--border));
+  }
+  .score-tile {
+    @apply rounded-xl border bg-card text-center transition-all;
+    box-shadow: var(--shadow-card);
+  }
+  .scoring-btn {
+    @apply rounded-xl font-bold text-lg transition-all active:scale-95 select-none;
+    box-shadow: var(--shadow-card);
+  }
+  .pulse-dot::before {
+    content: '';
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 9999px;
+    background: hsl(var(--ball));
+    margin-right: 6px;
+    animation: livePulse 1.5s infinite;
+    vertical-align: middle;
+  }
+}
+
+@keyframes livePulse {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--ball) / 0.7); }
+  50% { box-shadow: 0 0 0 8px hsl(var(--ball) / 0); }
+}
+@keyframes scoreFlash {
+  0% { transform: scale(1); color: hsl(var(--accent)); }
+  50% { transform: scale(1.15); color: hsl(var(--accent-glow)); }
+  100% { transform: scale(1); color: hsl(var(--foreground)); }
+}
+.flash { animation: scoreFlash 0.5s ease-out; }
