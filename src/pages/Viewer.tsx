@@ -120,15 +120,7 @@ const Viewer = () => {
               <div className="text-xs uppercase tracking-widest text-muted-foreground">Innings {innings.innings_number}</div>
               <div className="display text-2xl md:text-3xl">{renderName(innings.batting_team)}</div>
             </div>
-            <div className="mx-auto w-full max-w-[22rem] rounded-2xl border border-white/10 bg-[#0e2032] px-6 py-5 text-center shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
-              <div className="text-xs uppercase tracking-[0.3em] text-white/45 mb-3">Live Ball</div>
-              <div className="display text-5xl md:text-7xl leading-none text-[#f5e89c]">
-                {latestDeliveryLabel(currentInningsBalls)}
-              </div>
-              <div className="mt-3 text-sm md:text-base text-white/75">
-                {latestDeliverySummary(currentInningsBalls)}
-              </div>
-            </div>
+            <LiveBallPanel balls={currentInningsBalls} />
             <div className="text-right">
               <div className={`display text-6xl md:text-8xl leading-none ${flash ? "flash" : ""}`}>
                 {innings.runs}<span className="text-muted-foreground">/</span>{innings.wickets}
@@ -201,15 +193,7 @@ const Viewer = () => {
 
           <TabsContent value="live" className="mt-4">
             <div className="glass rounded-2xl overflow-hidden p-4 md:p-6">
-              <div className="rounded-2xl border border-white/10 bg-[#0e2032] px-6 py-8 md:px-10 md:py-10 text-center">
-                <div className="text-xs uppercase tracking-[0.3em] text-white/45 mb-3">Live Ball</div>
-                <div className="display text-5xl md:text-7xl leading-none text-[#f5e89c]">
-                  {latestDeliveryLabel(currentInningsBalls)}
-                </div>
-                <div className="mt-3 text-sm md:text-base text-white/75">
-                  {latestDeliverySummary(currentInningsBalls)}
-                </div>
-              </div>
+              <LiveBallPanel balls={currentInningsBalls} />
             </div>
           </TabsContent>
 
@@ -281,6 +265,21 @@ function latestDeliverySummary(balls: any[]) {
   if (lastBall.extra_type === "leg_bye") return `Batsman: 0, ${lastBall.extra_runs} leg bye${lastBall.extra_runs === 1 ? "" : "s"}`;
   if (lastBall.is_wicket) return `Batsman: ${lastBall.runs || 0}, ${lastBall.wicket_type ? lastBall.wicket_type.split("_").join(" ") : "Wicket"}`;
   return `Batsman: ${lastBall.runs || 0} run${(lastBall.runs || 0) === 1 ? "" : "s"}`;
+}
+function LiveBallPanel({ balls }: { balls: any[] }) {
+  return (
+    <div className="mx-auto w-full max-w-[22rem] rounded-2xl border border-white/10 bg-[#0e2032] px-6 py-5 text-center shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+      <div className="mx-auto mb-4 flex h-32 w-32 items-center justify-center rounded-full border-2 border-black/60 bg-black/95 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]">
+        <div className="display text-[2.75rem] font-black leading-none text-[#f5e89c] md:text-[4.25rem]">
+          {latestDeliveryLabel(balls)}
+        </div>
+      </div>
+      <div className="text-2xl font-extrabold tracking-[0.18em] text-[#f5e89c]">Ball</div>
+      <div className="mt-3 text-sm text-white/75 md:text-base">
+        {latestDeliverySummary(balls)}
+      </div>
+    </div>
+  );
 }
 
 export default Viewer;
