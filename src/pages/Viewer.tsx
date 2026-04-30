@@ -504,7 +504,7 @@ function CommentaryRow({ item }: { item: { delivery: string; text: string } }) {
 
 function LiveBallPanel({ balls }: { balls: any[] }) {
   return (
-    <div className="mx-auto flex h-[18rem] w-full max-w-[18rem] items-center justify-center rounded-3xl border border-white/5 bg-[#0e2032]/55 text-center shadow-[0_10px_30px_rgba(0,0,0,0.22)]">
+    <div className="mx-auto flex min-h-[18rem] w-full items-center justify-center text-center">
       <div className="display text-[4.75rem] font-black leading-none text-[#f5e89c] md:text-[6.5rem]">
         {latestDeliveryLabel(balls)}
       </div>
