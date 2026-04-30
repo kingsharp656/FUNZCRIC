@@ -149,10 +149,6 @@ const Viewer = () => {
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t">
-            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">This over</div>
-            <OverStrip balls={balls.filter((ball) => ball.innings_number === innings.innings_number)} />
-          </div>
         </div>
 
         <Tabs defaultValue="live">
@@ -193,67 +189,17 @@ const Viewer = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="live" className="mt-4 glass rounded-2xl p-4 md:p-6">
-            <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
-              <div className="space-y-6">
-                <div>
-                  <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Recent overs</div>
-                  <div className="space-y-4">
-                    {buildOverSummaries(balls.filter((ball) => ball.innings_number === innings.innings_number)).map((over) => (
-                      <div key={over.over} className="rounded-xl border bg-background/60 p-4">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <div className="font-semibold text-sm text-muted-foreground">Over {over.over}</div>
-                          <div className="flex gap-2 flex-wrap">
-                            {over.events.map((event, index) => (
-                              <span key={`${over.over}-${index}`} className={`inline-flex items-center justify-center h-8 w-8 rounded-full border text-xs mono ${event.kind === "wicket" ? "bg-ball/20 border-ball text-ball" : event.kind === "extra" ? "bg-secondary" : event.runs >= 4 ? "bg-accent/20 border-accent text-accent" : "bg-secondary"}`}>
-                                {event.label}
-                              </span>
-                            ))}
-                          </div>
-                          <div className="ml-auto mono text-sm text-muted-foreground">= {over.runs}</div>
-                        </div>
-                      </div>
-                    ))}
+          <TabsContent value="live" className="mt-4">
+            <div className="glass rounded-2xl overflow-hidden">
+              <div className="relative min-h-[260px] md:min-h-[360px] bg-[#0e2032] px-6 py-10 md:px-10 md:py-16 flex items-center justify-center">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,244,160,0.08),transparent_55%)]" />
+                <div className="relative text-center space-y-4">
+                  <div className="display text-[4.5rem] leading-none md:text-[7rem] text-[#f5e89c] tracking-tight">
+                    {latestDeliveryLabel(balls.filter((ball) => ball.innings_number === innings.innings_number))}
                   </div>
-                </div>
-
-                <div>
-                  <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Commentary</div>
-                  <div className="space-y-3">
-                    {buildCommentary(balls.filter((ball) => ball.innings_number === innings.innings_number)).map((entry) => (
-                      <div key={entry.key} className="rounded-xl border bg-background/70 p-4">
-                        <div className="flex items-start gap-4">
-                          <div className="min-w-16 text-sm font-semibold mono text-muted-foreground">{entry.overBall}</div>
-                          <div className="h-8 w-8 rounded-full border flex items-center justify-center mono text-xs font-bold bg-secondary">{entry.shortLabel}</div>
-                          <div className="flex-1">
-                            <div className="font-medium">{entry.text}</div>
-                            <div className="text-xs text-muted-foreground mt-1">{entry.detail}</div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {balls.filter((ball) => ball.innings_number === innings.innings_number).length === 0 && (
-                      <div className="text-sm text-muted-foreground">Commentary will appear here as soon as the scorer records balls.</div>
-                    )}
+                  <div className="text-2xl md:text-5xl font-extrabold tracking-wide text-[#f5e89c]">
+                    Ball
                   </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="rounded-xl border bg-secondary/20 p-4">
-                  <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Score summary</div>
-                  <div className="display text-5xl">{innings.runs}<span className="text-muted-foreground">/</span>{innings.wickets}</div>
-                  <div className="mono text-sm text-muted-foreground mt-1">({oversString(innings.balls)} ov · RR {rr.toFixed(2)})</div>
-                </div>
-                {innings.target && !isEnded && (
-                  <div className="rounded-xl border bg-secondary/20 p-4 text-sm">
-                    <div><span className="text-muted-foreground">Need:</span> <span className="mono font-bold">{Math.max(0, innings.target - innings.runs)}</span></div>
-                    <div className="mt-1"><span className="text-muted-foreground">Balls left:</span> <span className="mono font-bold">{ballsLeft}</span></div>
-                    {rrr !== null && <div className="mt-1"><span className="text-muted-foreground">RRR:</span> <span className="mono font-bold">{rrr.toFixed(2)}</span></div>}
-                  </div>
-                )}
-                <div className="rounded-xl border bg-secondary/20 p-4">
-                  <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Current over</div>
-                  <OverStrip balls={balls.filter((ball) => ball.innings_number === innings.innings_number)} />
                 </div>
               </div>
             </div>
@@ -268,16 +214,6 @@ const Viewer = () => {
   );
 };
 
-function recentOverBalls(balls: any[]) {
-  let countLegal = 0;
-  const out: any[] = [];
-  for (let i = balls.length - 1; i >= 0; i--) {
-    out.unshift(balls[i]);
-    if (balls[i].is_legal) countLegal += 1;
-    if (countLegal >= 6) break;
-  }
-  return out;
-}
 function ballLabel(b: any) {
   if (b.extra_type === "wide" && b.is_wicket) return `Wd${b.extra_runs > 1 ? `+${b.extra_runs - 1}` : ""}W`;
   if (b.is_wicket) return "W";
@@ -287,93 +223,10 @@ function ballLabel(b: any) {
   if (b.extra_type === "leg_bye") return `${b.extra_runs}lb`;
   return String(b.runs);
 }
-function overBallNumber(b: any) {
-  return `${b.over_number}.${b.ball_in_over}`;
-}
-function buildOverSummaries(balls: any[]) {
-  const summaries = new Map<number, { over: number; runs: number; events: { label: string; kind: "run" | "extra" | "wicket"; runs: number }[] }>();
-
-  for (const ball of balls) {
-    const entry = summaries.get(ball.over_number) || { over: ball.over_number + 1, runs: 0, events: [] };
-    if (ball.extra_type === "wide" || ball.extra_type === "no_ball") {
-      const totalRuns = (ball.extra_runs || 0) + (ball.extra_type === "no_ball" ? (ball.runs || 0) : 0);
-      entry.runs += totalRuns;
-      entry.events.push({ label: ballLabel(ball), kind: ball.is_wicket ? "wicket" : "extra", runs: totalRuns });
-    } else if (ball.extra_type === "bye" || ball.extra_type === "leg_bye") {
-      entry.runs += ball.extra_runs || 0;
-      entry.events.push({ label: ballLabel(ball), kind: "extra", runs: ball.extra_runs || 0 });
-    } else {
-      entry.runs += ball.runs || 0;
-      entry.events.push({ label: ballLabel(ball), kind: ball.is_wicket ? "wicket" : "run", runs: ball.runs || 0 });
-    }
-    summaries.set(ball.over_number, entry);
-  }
-
-  return [...summaries.values()].slice(-4);
-}
-
-function buildCommentary(balls: any[]) {
-  return [...balls]
-    .slice()
-    .reverse()
-    .map((ball) => ({
-      key: ball.id,
-      overBall: overBallNumber(ball),
-      shortLabel: ballLabel(ball),
-      text: describeBall(ball),
-      detail: `${renderName(ball.bowler) || "Bowler"} to ${renderName(ball.striker) || "batter"}`,
-    }));
-}
-
-function OverStrip({ balls }: { balls: any[] }) {
-  const currentOverBalls = recentOverBalls(balls);
-  return (
-    <div className="flex items-center gap-2 flex-wrap">
-      {currentOverBalls.map((ball, index) => (
-        <span
-          key={ball.id ?? index}
-          className={`h-8 w-8 rounded-full border flex items-center justify-center text-xs mono ${
-            ball.is_wicket ? "bg-ball/20 border-ball text-ball" : ball.extra_type ? "bg-secondary" : ball.runs >= 4 ? "bg-accent/20 border-accent text-accent" : "bg-secondary"
-          }`}
-        >
-          {ballLabel(ball)}
-        </span>
-      ))}
-      {currentOverBalls.length === 0 && <span className="text-sm text-muted-foreground">Waiting for the over to start…</span>}
-    </div>
-  );
-}
-function describeBall(b: any) {
-  if (b.extra_type === "wide") {
-    const wideRuns = b.extra_runs || 1;
-    if (b.is_wicket) return `Wide ${wideRuns} run${wideRuns === 1 ? "" : "s"} and stumped`;
-    return `Wide ${wideRuns} run${wideRuns === 1 ? "" : "s"}`;
-  }
-  if (b.extra_type === "no_ball") {
-    const totalRuns = b.extra_runs + (b.runs || 0);
-    return `No ball, ${totalRuns} run${totalRuns === 1 ? "" : "s"}`;
-  }
-  if (b.extra_type === "bye") return `${b.extra_runs} bye${b.extra_runs === 1 ? "" : "s"}`;
-  if (b.extra_type === "leg_bye") return `${b.extra_runs} leg bye${b.extra_runs === 1 ? "" : "s"}`;
-  if (b.is_wicket) {
-    const wicketText = b.wicket_type ? b.wicket_type.replace("_", " ") : "wicket";
-    return `${wicketText.charAt(0).toUpperCase()}${wicketText.slice(1)}`;
-  }
-  if (b.runs === 0) return "Dot ball";
-  return `${b.runs} run${b.runs === 1 ? "" : "s"}`;
-}
-function overSeries(balls: any[]) {
-  const points: { over: number; runs: number }[] = [];
-  let runs = 0, legal = 0;
-  for (const b of balls) {
-    if (b.extra_type === "wide" || b.extra_type === "no_ball") runs += b.extra_runs + (b.extra_type === "no_ball" ? b.runs : 0);
-    else runs += b.runs + b.extra_runs;
-    if (b.is_legal) {
-      legal += 1;
-      if (legal % 6 === 0) points.push({ over: legal / 6, runs });
-    }
-  }
-  return points;
+function latestDeliveryLabel(balls: any[]) {
+  const lastBall = balls[balls.length - 1];
+  if (!lastBall) return "Ball";
+  return ballLabel(lastBall);
 }
 
 export default Viewer;
