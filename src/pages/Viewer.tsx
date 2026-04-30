@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Trophy, CalendarDays, Radio, NotebookText } from "lucide-react";
 import { oversString, runRate, requiredRunRate } from "@/lib/scoring-engine";
-import { renderName } from "@/lib/admin-name";
+import { displayName, renderName } from "@/lib/admin-name";
 import { Scorecard } from "@/components/Scorecard";
 
 const Viewer = () => {
@@ -431,7 +431,7 @@ function findLastWicket(balls: any[]) {
     const ball = balls[i];
     if (ball.is_wicket && ball.out_player) {
       const over = `${ball.over_number}.${ball.ball_in_over}`;
-      return `${renderName(ball.out_player)} ${over}`;
+      return `${displayName(ball.out_player)} ${over}`;
     }
   }
   return "";
@@ -444,7 +444,7 @@ function buildCommentary(balls: any[]) {
     .slice(0, 6)
     .map((ball, index) => {
       const delivery = `${ball.over_number}.${ball.ball_in_over}`;
-      const text = ball.commentary || `${renderName(ball.bowler) || "Bowler"} to ${renderName(ball.striker) || "batter"} — ${ballLabel(ball)}`;
+      const text = ball.commentary || `${displayName(ball.bowler) || "Bowler"} to ${displayName(ball.striker) || "batter"} — ${ballLabel(ball)}`;
       return { key: ball.id || `${delivery}-${index}`, delivery, text };
     })
     .reverse();
@@ -473,7 +473,7 @@ function computeMomentum(runs: number, balls: number, target: number, ballsLeft:
 }
 
 function PlayerCard({ name, score, active = false }: { name?: string | null; score?: { runs: number; balls: number }; active?: boolean }) {
-  const label = renderName(name) || "—";
+  const label = displayName(name) || "—";
   const initials = label
     .split(" ")
     .filter(Boolean)
