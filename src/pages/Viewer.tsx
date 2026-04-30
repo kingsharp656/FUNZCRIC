@@ -201,7 +201,7 @@ const Viewer = () => {
           <TabsContent value="live" className="mt-4">
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.85fr)]">
               <section className="glass rounded-2xl p-4 md:p-6">
-                <div className="grid gap-6 xl:grid-cols-[1fr_auto_1fr] xl:items-center rounded-2xl border border-white/10 bg-[#0e2032] p-6 md:p-8">
+                <div className="grid gap-6 xl:grid-cols-2 xl:items-center rounded-2xl border border-white/10 bg-[#0e2032] p-6 md:p-8">
                   <div className="grid grid-cols-[auto_1fr] gap-4 items-end">
                     <PlayerCard name={innings.striker} score={currentBatters[0]} active />
                     <div className="min-w-0">
@@ -213,17 +213,15 @@ const Viewer = () => {
                     </div>
                   </div>
 
-                  <LiveBallPanel balls={currentInningsBalls} />
-
                   <div className="grid grid-cols-[auto_1fr] gap-4 items-end justify-self-end text-left xl:text-right">
-                    <div className="order-2 xl:order-1 min-w-0">
+                    <PlayerCard name={innings.non_striker} score={currentBatters[1]} />
+                    <div className="min-w-0">
                       <div className="text-sm text-muted-foreground">Non-striker</div>
                       <div className="font-semibold text-lg truncate">{renderName(innings.non_striker) || "—"}</div>
                       <div className="mono text-sm text-muted-foreground">
                         {currentBatters[1] ? `${currentBatters[1].runs} (${currentBatters[1].balls})` : "0 (0)"}
                       </div>
                     </div>
-                    <PlayerCard name={innings.non_striker} score={currentBatters[1]} />
                   </div>
                 </div>
 
