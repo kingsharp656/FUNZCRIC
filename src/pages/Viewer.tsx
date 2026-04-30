@@ -230,6 +230,34 @@ function ballLabel(b: any) {
   if (b.extra_type === "leg_bye") return `${b.extra_runs}lb`;
   return String(b.runs);
 }
+function recentOverBalls(balls: any[]) {
+  let countLegal = 0;
+  const out: any[] = [];
+  for (let i = balls.length - 1; i >= 0; i--) {
+    out.unshift(balls[i]);
+    if (balls[i].is_legal) countLegal += 1;
+    if (countLegal >= 6) break;
+  }
+  return out;
+}
+function OverStrip({ balls }: { balls: any[] }) {
+  const currentOverBalls = recentOverBalls(balls);
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {currentOverBalls.map((ball, index) => (
+        <span
+          key={ball.id ?? index}
+          className={`h-8 w-8 rounded-full border flex items-center justify-center text-xs mono ${
+            ball.is_wicket ? "bg-ball/20 border-ball text-ball" : ball.extra_type ? "bg-secondary" : ball.runs >= 4 ? "bg-accent/20 border-accent text-accent" : "bg-secondary"
+          }`}
+        >
+          {ballLabel(ball)}
+        </span>
+      ))}
+      {currentOverBalls.length === 0 && <span className="text-sm text-muted-foreground">Waiting for the over to start…</span>}
+    </div>
+  );
+}
 function latestDeliveryLabel(balls: any[]) {
   const lastBall = balls[balls.length - 1];
   if (!lastBall) return "Ball";
