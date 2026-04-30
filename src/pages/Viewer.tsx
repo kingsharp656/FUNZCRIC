@@ -194,9 +194,9 @@ const Viewer = () => {
               <div className="relative min-h-[260px] md:min-h-[360px] bg-[#0e2032] px-6 py-10 md:px-10 md:py-16 flex items-center justify-center">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,244,160,0.08),transparent_55%)]" />
                 <div className="relative text-center space-y-4">
-                  <div className="mx-auto flex h-32 w-32 md:h-40 md:w-40 items-center justify-center rounded-full border-2 border-black/50 bg-black/80 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
+                  <div className="mx-auto flex h-32 w-32 md:h-40 md:w-40 items-center justify-center rounded-full border-2 border-white/10 bg-black/90 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]">
                     <div className="text-center leading-none">
-                      <div className="display text-5xl md:text-6xl text-[#f5e89c] tracking-tight">
+                      <div className="text-[2.75rem] md:text-[4.25rem] font-black text-[#f5e89c] tracking-tight">
                         {latestDeliveryLabel(balls.filter((ball) => ball.innings_number === innings.innings_number))}
                       </div>
                     </div>
@@ -204,7 +204,7 @@ const Viewer = () => {
                   <div className="text-2xl md:text-5xl font-extrabold tracking-wide text-[#f5e89c]">
                     Ball
                   </div>
-                  <div className="text-sm md:text-base text-white/70">
+                  <div className="text-sm md:text-base text-white/75">
                     {latestDeliverySummary(balls.filter((ball) => ball.innings_number === innings.innings_number))}
                   </div>
                 </div>
@@ -238,13 +238,20 @@ function latestDeliveryLabel(balls: any[]) {
 function latestDeliverySummary(balls: any[]) {
   const lastBall = balls[balls.length - 1];
   if (!lastBall) return "Waiting for the first ball";
-  if (lastBall.extra_type === "wide" && lastBall.is_wicket) return `Wide ball, stumped wicket`;
-  if (lastBall.extra_type === "wide") return `Wide ball, ${lastBall.extra_runs || 1} run${(lastBall.extra_runs || 1) === 1 ? "" : "s"}`;
-  if (lastBall.extra_type === "no_ball") return `No ball, ${lastBall.extra_runs + (lastBall.runs || 0)} run${lastBall.extra_runs + (lastBall.runs || 0) === 1 ? "" : "s"}`;
-  if (lastBall.extra_type === "bye") return `${lastBall.extra_runs} bye${lastBall.extra_runs === 1 ? "" : "s"}`;
-  if (lastBall.extra_type === "leg_bye") return `${lastBall.extra_runs} leg bye${lastBall.extra_runs === 1 ? "" : "s"}`;
-  if (lastBall.is_wicket) return `${lastBall.wicket_type ? lastBall.wicket_type.split("_").join(" ") : "Wicket"}`;
-  return `${lastBall.runs} run${lastBall.runs === 1 ? "" : "s"}`;
+  if (lastBall.extra_type === "wide" && lastBall.is_wicket) return `Batsman: 0, wide, stumped`;
+  if (lastBall.extra_type === "wide") {
+    const wideRuns = lastBall.extra_runs || 1;
+    return `Batsman: 0, wide ${wideRuns} run${wideRuns === 1 ? "" : "s"}`;
+  }
+  if (lastBall.extra_type === "no_ball") {
+    const extraRuns = lastBall.extra_runs || 1;
+    const batterRuns = lastBall.runs || 0;
+    return `Batsman: ${batterRuns}, no ball ${extraRuns + batterRuns} run${extraRuns + batterRuns === 1 ? "" : "s"}`;
+  }
+  if (lastBall.extra_type === "bye") return `Batsman: 0, ${lastBall.extra_runs} bye${lastBall.extra_runs === 1 ? "" : "s"}`;
+  if (lastBall.extra_type === "leg_bye") return `Batsman: 0, ${lastBall.extra_runs} leg bye${lastBall.extra_runs === 1 ? "" : "s"}`;
+  if (lastBall.is_wicket) return `Batsman: ${lastBall.runs || 0}, ${lastBall.wicket_type ? lastBall.wicket_type.split("_").join(" ") : "Wicket"}`;
+  return `Batsman: ${lastBall.runs || 0} run${(lastBall.runs || 0) === 1 ? "" : "s"}`;
 }
 
 export default Viewer;
