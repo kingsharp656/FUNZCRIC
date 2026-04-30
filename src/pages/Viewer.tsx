@@ -4,11 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { BrandHeader } from "@/components/BrandHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Trophy } from "lucide-react";
+import { Loader2, Trophy, CalendarDays, Radio, NotebookText } from "lucide-react";
 import { oversString, runRate, requiredRunRate } from "@/lib/scoring-engine";
 import { renderName } from "@/lib/admin-name";
 import { Scorecard } from "@/components/Scorecard";
-import { RunRateChart } from "@/components/RunRateChart";
 
 const Viewer = () => {
   const { viewToken } = useParams();
@@ -150,52 +149,118 @@ const Viewer = () => {
             </div>
           </div>
 
-          {/* Recent balls */}
           <div className="mt-6 pt-4 border-t">
             <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">This over</div>
-            <div className="flex gap-2 flex-wrap">
-              {recentOverBalls(balls.filter((b) => b.innings_number === innings.innings_number)).map((b, i) => (
-                <span key={i} className={`mono text-sm rounded-md px-2.5 py-1 border ${b.is_wicket ? "bg-ball/20 border-ball text-ball" : b.extra_type ? "bg-secondary" : b.runs >= 4 ? "bg-accent/20 border-accent text-accent" : "bg-secondary"}`}>
-                  {ballLabel(b)}
-                </span>
-              ))}
-              {balls.length === 0 && <span className="text-sm text-muted-foreground">Waiting for first ball…</span>}
-            </div>
-          </div>
-
-          <div className="mt-6 pt-4 border-t">
-            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Ball by ball</div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {balls
-                .filter((ball) => ball.innings_number === innings.innings_number)
-                .map((ball, index) => (
-                  <div key={ball.id ?? index} className="rounded-lg border bg-secondary/30 px-3 py-2 text-sm flex items-start justify-between gap-3">
-                    <div>
-                      <div className="font-semibold mono">{overBallNumber(ball)}</div>
-                      <div className="text-muted-foreground">{describeBall(ball)}</div>
-                    </div>
-                    <div className={`mono text-xs rounded-md px-2 py-1 border ${ball.is_wicket ? "bg-ball/20 border-ball text-ball" : ball.extra_type ? "bg-background" : "bg-background"}`}>
-                      {ballLabel(ball)}
-                    </div>
-                  </div>
-                ))}
-            </div>
-            {balls.filter((ball) => ball.innings_number === innings.innings_number).length === 0 && (
-              <div className="text-sm text-muted-foreground">Ball-by-ball updates will appear here as soon as scoring starts.</div>
-            )}
+            <OverStrip balls={balls.filter((ball) => ball.innings_number === innings.innings_number)} />
           </div>
         </div>
 
-        <Tabs defaultValue="card">
-          <TabsList className="grid grid-cols-2 w-full max-w-sm">
-            <TabsTrigger value="card">Scorecard</TabsTrigger>
-            <TabsTrigger value="rr">Run Rate</TabsTrigger>
+        <Tabs defaultValue="live">
+          <TabsList className="grid grid-cols-3 w-full max-w-lg">
+            <TabsTrigger value="info"><CalendarDays className="mr-2 h-4 w-4" /> Match info</TabsTrigger>
+            <TabsTrigger value="live"><Radio className="mr-2 h-4 w-4" /> Live</TabsTrigger>
+            <TabsTrigger value="card"><NotebookText className="mr-2 h-4 w-4" /> Scorecard</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="info" className="mt-4 glass rounded-2xl p-4 md:p-6">
+            <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+              <div className="space-y-4">
+                <div>
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Batting</div>
+                  <div className="display text-2xl">{renderName(innings.batting_team)}</div>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Batters</div>
+                    <div className="font-semibold">{renderName(innings.striker) || "—"} <span className="text-accent">*</span></div>
+                    <div className="text-muted-foreground">{renderName(innings.non_striker) || "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Bowler</div>
+                    <div className="font-semibold">{renderName(innings.bowler) || "—"}</div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-4 text-sm pt-2">
+                  <div><span className="text-muted-foreground">Overs:</span> <span className="mono font-bold">{oversString(innings.balls)}</span></div>
+                  <div><span className="text-muted-foreground">CRR:</span> <span className="mono font-bold">{rr.toFixed(2)}</span></div>
+                  {innings.target && <div><span className="text-muted-foreground">Target:</span> <span className="mono font-bold">{innings.target}</span></div>}
+                </div>
+              </div>
+              <div className="rounded-xl border bg-secondary/20 p-4">
+                <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Last over</div>
+                <OverStrip balls={balls.filter((ball) => ball.innings_number === innings.innings_number)} />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="live" className="mt-4 glass rounded-2xl p-4 md:p-6">
+            <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+              <div className="space-y-6">
+                <div>
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Recent overs</div>
+                  <div className="space-y-4">
+                    {buildOverSummaries(balls.filter((ball) => ball.innings_number === innings.innings_number)).map((over) => (
+                      <div key={over.over} className="rounded-xl border bg-background/60 p-4">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="font-semibold text-sm text-muted-foreground">Over {over.over}</div>
+                          <div className="flex gap-2 flex-wrap">
+                            {over.events.map((event, index) => (
+                              <span key={`${over.over}-${index}`} className={`inline-flex items-center justify-center h-8 w-8 rounded-full border text-xs mono ${event.kind === "wicket" ? "bg-ball/20 border-ball text-ball" : event.kind === "extra" ? "bg-secondary" : event.runs >= 4 ? "bg-accent/20 border-accent text-accent" : "bg-secondary"}`}>
+                                {event.label}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="ml-auto mono text-sm text-muted-foreground">= {over.runs}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Commentary</div>
+                  <div className="space-y-3">
+                    {buildCommentary(balls.filter((ball) => ball.innings_number === innings.innings_number)).map((entry) => (
+                      <div key={entry.key} className="rounded-xl border bg-background/70 p-4">
+                        <div className="flex items-start gap-4">
+                          <div className="min-w-16 text-sm font-semibold mono text-muted-foreground">{entry.overBall}</div>
+                          <div className="h-8 w-8 rounded-full border flex items-center justify-center mono text-xs font-bold bg-secondary">{entry.shortLabel}</div>
+                          <div className="flex-1">
+                            <div className="font-medium">{entry.text}</div>
+                            <div className="text-xs text-muted-foreground mt-1">{entry.detail}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {balls.filter((ball) => ball.innings_number === innings.innings_number).length === 0 && (
+                      <div className="text-sm text-muted-foreground">Commentary will appear here as soon as the scorer records balls.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="rounded-xl border bg-secondary/20 p-4">
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Score summary</div>
+                  <div className="display text-5xl">{innings.runs}<span className="text-muted-foreground">/</span>{innings.wickets}</div>
+                  <div className="mono text-sm text-muted-foreground mt-1">({oversString(innings.balls)} ov · RR {rr.toFixed(2)})</div>
+                </div>
+                {innings.target && !isEnded && (
+                  <div className="rounded-xl border bg-secondary/20 p-4 text-sm">
+                    <div><span className="text-muted-foreground">Need:</span> <span className="mono font-bold">{Math.max(0, innings.target - innings.runs)}</span></div>
+                    <div className="mt-1"><span className="text-muted-foreground">Balls left:</span> <span className="mono font-bold">{ballsLeft}</span></div>
+                    {rrr !== null && <div className="mt-1"><span className="text-muted-foreground">RRR:</span> <span className="mono font-bold">{rrr.toFixed(2)}</span></div>}
+                  </div>
+                )}
+                <div className="rounded-xl border bg-secondary/20 p-4">
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Current over</div>
+                  <OverStrip balls={balls.filter((ball) => ball.innings_number === innings.innings_number)} />
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
           <TabsContent value="card" className="mt-4 glass rounded-2xl p-4 md:p-6">
             <Scorecard balls={balls} />
-          </TabsContent>
-          <TabsContent value="rr" className="mt-4 glass rounded-2xl p-4 md:p-6">
-            <RunRateChart data={overSeries(balls.filter((b) => b.innings_number === innings.innings_number))} />
           </TabsContent>
         </Tabs>
       </main>
@@ -224,6 +289,59 @@ function ballLabel(b: any) {
 }
 function overBallNumber(b: any) {
   return `${b.over_number}.${b.ball_in_over}`;
+}
+function buildOverSummaries(balls: any[]) {
+  const summaries = new Map<number, { over: number; runs: number; events: { label: string; kind: "run" | "extra" | "wicket"; runs: number }[] }>();
+
+  for (const ball of balls) {
+    const entry = summaries.get(ball.over_number) || { over: ball.over_number + 1, runs: 0, events: [] };
+    if (ball.extra_type === "wide" || ball.extra_type === "no_ball") {
+      const totalRuns = (ball.extra_runs || 0) + (ball.extra_type === "no_ball" ? (ball.runs || 0) : 0);
+      entry.runs += totalRuns;
+      entry.events.push({ label: ballLabel(ball), kind: ball.is_wicket ? "wicket" : "extra", runs: totalRuns });
+    } else if (ball.extra_type === "bye" || ball.extra_type === "leg_bye") {
+      entry.runs += ball.extra_runs || 0;
+      entry.events.push({ label: ballLabel(ball), kind: "extra", runs: ball.extra_runs || 0 });
+    } else {
+      entry.runs += ball.runs || 0;
+      entry.events.push({ label: ballLabel(ball), kind: ball.is_wicket ? "wicket" : "run", runs: ball.runs || 0 });
+    }
+    summaries.set(ball.over_number, entry);
+  }
+
+  return [...summaries.values()].slice(-4);
+}
+
+function buildCommentary(balls: any[]) {
+  return [...balls]
+    .slice()
+    .reverse()
+    .map((ball) => ({
+      key: ball.id,
+      overBall: overBallNumber(ball),
+      shortLabel: ballLabel(ball),
+      text: describeBall(ball),
+      detail: `${renderName(ball.bowler) || "Bowler"} to ${renderName(ball.striker) || "batter"}`,
+    }));
+}
+
+function OverStrip({ balls }: { balls: any[] }) {
+  const currentOverBalls = recentOverBalls(balls);
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {currentOverBalls.map((ball, index) => (
+        <span
+          key={ball.id ?? index}
+          className={`h-8 w-8 rounded-full border flex items-center justify-center text-xs mono ${
+            ball.is_wicket ? "bg-ball/20 border-ball text-ball" : ball.extra_type ? "bg-secondary" : ball.runs >= 4 ? "bg-accent/20 border-accent text-accent" : "bg-secondary"
+          }`}
+        >
+          {ballLabel(ball)}
+        </span>
+      ))}
+      {currentOverBalls.length === 0 && <span className="text-sm text-muted-foreground">Waiting for the over to start…</span>}
+    </div>
+  );
 }
 function describeBall(b: any) {
   if (b.extra_type === "wide") {
