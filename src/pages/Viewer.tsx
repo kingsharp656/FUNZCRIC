@@ -193,7 +193,20 @@ const Viewer = () => {
 
           <TabsContent value="live" className="mt-4">
             <div className="glass rounded-2xl p-4 md:p-6">
-              <div className="min-h-[280px] rounded-2xl border border-white/10 bg-[#0e2032]" />
+              <div className="grid gap-6 lg:grid-cols-[1fr_auto_1fr] lg:items-center rounded-2xl border border-white/10 bg-[#0e2032] p-6 md:p-8">
+                <div className="space-y-1">
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground">Batters</div>
+                  <div className="font-semibold text-lg">{renderName(innings.striker) || "—"} <span className="text-accent">*</span></div>
+                  <div className="text-muted-foreground text-base">{renderName(innings.non_striker) || "—"}</div>
+                </div>
+
+                <LiveBallPanel balls={currentInningsBalls} />
+
+                <div className="space-y-1 text-left lg:text-right">
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground">Bowler</div>
+                  <div className="font-semibold text-lg">{renderName(innings.bowler) || "—"}</div>
+                </div>
+              </div>
             </div>
           </TabsContent>
 
