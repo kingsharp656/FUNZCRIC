@@ -72,6 +72,7 @@ const Viewer = () => {
   const isEnded = match.status === "ended";
   const isLive = match.status === "live";
   const isPaused = match.status === "paused";
+  const currentInningsBalls = balls.filter((ball) => ball.innings_number === innings.innings_number);
 
   // Result text
   let resultText = "";
@@ -114,10 +115,19 @@ const Viewer = () => {
 
         {/* Hero scoreboard */}
         <div className="glass rounded-2xl p-6 md:p-8">
-          <div className="flex items-baseline justify-between gap-4 flex-wrap">
+          <div className="grid gap-6 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
             <div>
               <div className="text-xs uppercase tracking-widest text-muted-foreground">Innings {innings.innings_number}</div>
               <div className="display text-2xl md:text-3xl">{renderName(innings.batting_team)}</div>
+            </div>
+            <div className="mx-auto w-full max-w-[22rem] rounded-2xl border border-white/10 bg-[#0e2032] px-6 py-5 text-center shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+              <div className="text-xs uppercase tracking-[0.3em] text-white/45 mb-3">Live Ball</div>
+              <div className="display text-5xl md:text-7xl leading-none text-[#f5e89c]">
+                {latestDeliveryLabel(currentInningsBalls)}
+              </div>
+              <div className="mt-3 text-sm md:text-base text-white/75">
+                {latestDeliverySummary(currentInningsBalls)}
+              </div>
             </div>
             <div className="text-right">
               <div className={`display text-6xl md:text-8xl leading-none ${flash ? "flash" : ""}`}>
@@ -190,23 +200,14 @@ const Viewer = () => {
           </TabsContent>
 
           <TabsContent value="live" className="mt-4">
-            <div className="glass rounded-2xl overflow-hidden">
-              <div className="relative min-h-[260px] md:min-h-[360px] bg-[#0e2032] px-6 py-10 md:px-10 md:py-16 flex items-center justify-center">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,244,160,0.08),transparent_55%)]" />
-                <div className="relative text-center space-y-4">
-                  <div className="mx-auto flex h-32 w-32 md:h-40 md:w-40 items-center justify-center rounded-full border-2 border-white/10 bg-black/90 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]">
-                    <div className="text-center leading-none">
-                      <div className="text-[2.75rem] md:text-[4.25rem] font-black text-[#f5e89c] tracking-tight">
-                        {latestDeliveryLabel(balls.filter((ball) => ball.innings_number === innings.innings_number))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-2xl md:text-5xl font-extrabold tracking-wide text-[#f5e89c]">
-                    Ball
-                  </div>
-                  <div className="text-sm md:text-base text-white/75">
-                    {latestDeliverySummary(balls.filter((ball) => ball.innings_number === innings.innings_number))}
-                  </div>
+            <div className="glass rounded-2xl overflow-hidden p-4 md:p-6">
+              <div className="rounded-2xl border border-white/10 bg-[#0e2032] px-6 py-8 md:px-10 md:py-10 text-center">
+                <div className="text-xs uppercase tracking-[0.3em] text-white/45 mb-3">Live Ball</div>
+                <div className="display text-5xl md:text-7xl leading-none text-[#f5e89c]">
+                  {latestDeliveryLabel(currentInningsBalls)}
+                </div>
+                <div className="mt-3 text-sm md:text-base text-white/75">
+                  {latestDeliverySummary(currentInningsBalls)}
                 </div>
               </div>
             </div>
