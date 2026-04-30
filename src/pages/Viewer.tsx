@@ -36,6 +36,14 @@ const Viewer = () => {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
+    if (!viewToken) return;
+    const timer = window.setInterval(() => {
+      load();
+    }, 2000);
+    return () => window.clearInterval(timer);
+  }, [viewToken, load]);
+
+  useEffect(() => {
     if (!match) return;
     const ch = supabase.channel(`viewer-${match.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "matches", filter: `id=eq.${match.id}` }, () => load())
@@ -154,6 +162,28 @@ const Viewer = () => {
               {balls.length === 0 && <span className="text-sm text-muted-foreground">Waiting for first ball…</span>}
             </div>
           </div>
+
+          <div className="mt-6 pt-4 border-t">
+            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Ball by ball</div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {balls
+                .filter((ball) => ball.innings_number === innings.innings_number)
+                .map((ball, index) => (
+                  <div key={ball.id ?? index} className="rounded-lg border bg-secondary/30 px-3 py-2 text-sm flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-semibold mono">{overBallNumber(ball)}</div>
+                      <div className="text-muted-foreground">{describeBall(ball)}</div>
+                    </div>
+                    <div className={`mono text-xs rounded-md px-2 py-1 border ${ball.is_wicket ? "bg-ball/20 border-ball text-ball" : ball.extra_type ? "bg-background" : "bg-background"}`}>
+                      {ballLabel(ball)}
+                    </div>
+                  </div>
+                ))}
+            </div>
+            {balls.filter((ball) => ball.innings_number === innings.innings_number).length === 0 && (
+              <div className="text-sm text-muted-foreground">Ball-by-ball updates will appear here as soon as scoring starts.</div>
+            )}
+          </div>
         </div>
 
         <Tabs defaultValue="card">
@@ -191,6 +221,28 @@ function ballLabel(b: any) {
   if (b.extra_type === "bye") return `${b.extra_runs}b`;
   if (b.extra_type === "leg_bye") return `${b.extra_runs}lb`;
   return String(b.runs);
+}
+function overBallNumber(b: any) {
+  return `${b.over_number}.${b.ball_in_over}`;
+}
+function describeBall(b: any) {
+  if (b.extra_type === "wide") {
+    const wideRuns = b.extra_runs || 1;
+    if (b.is_wicket) return `Wide ${wideRuns} run${wideRuns === 1 ? "" : "s"} and stumped`;
+    return `Wide ${wideRuns} run${wideRuns === 1 ? "" : "s"}`;
+  }
+  if (b.extra_type === "no_ball") {
+    const totalRuns = b.extra_runs + (b.runs || 0);
+    return `No ball, ${totalRuns} run${totalRuns === 1 ? "" : "s"}`;
+  }
+  if (b.extra_type === "bye") return `${b.extra_runs} bye${b.extra_runs === 1 ? "" : "s"}`;
+  if (b.extra_type === "leg_bye") return `${b.extra_runs} leg bye${b.extra_runs === 1 ? "" : "s"}`;
+  if (b.is_wicket) {
+    const wicketText = b.wicket_type ? b.wicket_type.replace("_", " ") : "wicket";
+    return `${wicketText.charAt(0).toUpperCase()}${wicketText.slice(1)}`;
+  }
+  if (b.runs === 0) return "Dot ball";
+  return `${b.runs} run${b.runs === 1 ? "" : "s"}`;
 }
 function overSeries(balls: any[]) {
   const points: { over: number; runs: number }[] = [];
