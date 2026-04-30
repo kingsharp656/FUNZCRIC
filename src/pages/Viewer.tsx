@@ -192,7 +192,9 @@ const Viewer = () => {
           </TabsContent>
 
           <TabsContent value="live" className="mt-4">
-            <div className="h-0 overflow-hidden" />
+            <div className="glass rounded-2xl p-4 md:p-6">
+              <div className="min-h-[280px] rounded-2xl border border-white/10 bg-[#0e2032]" />
+            </div>
           </TabsContent>
 
           <TabsContent value="card" className="mt-4 glass rounded-2xl p-4 md:p-6">
@@ -266,11 +268,9 @@ function latestDeliverySummary(balls: any[]) {
 }
 function LiveBallPanel({ balls }: { balls: any[] }) {
   return (
-    <div className="mx-auto w-full max-w-[22rem] rounded-2xl border border-white/10 bg-[#0e2032] px-6 py-5 text-center shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
-      <div className="mx-auto mb-4 flex h-32 w-32 items-center justify-center rounded-full border-2 border-black/60 bg-black/95 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]">
-        <div className="display text-[2.75rem] font-black leading-none text-[#f5e89c] md:text-[4.25rem]">
-          {latestDeliveryLabel(balls)}
-        </div>
+    <div className="mx-auto flex h-[18rem] w-full max-w-[18rem] items-center justify-center rounded-3xl border border-white/5 bg-[#0e2032]/55 text-center shadow-[0_10px_30px_rgba(0,0,0,0.22)]">
+      <div className="display text-[4.75rem] font-black leading-none text-[#f5e89c] md:text-[6.5rem]">
+        {latestDeliveryLabel(balls)}
       </div>
     </div>
   );
