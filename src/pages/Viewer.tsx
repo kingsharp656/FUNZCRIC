@@ -192,9 +192,7 @@ const Viewer = () => {
           </TabsContent>
 
           <TabsContent value="live" className="mt-4">
-            <div className="glass rounded-2xl overflow-hidden p-4 md:p-6">
-              <LiveBallPanel balls={currentInningsBalls} />
-            </div>
+            <div className="h-0 overflow-hidden" />
           </TabsContent>
 
           <TabsContent value="card" className="mt-4 glass rounded-2xl p-4 md:p-6">
@@ -273,10 +271,6 @@ function LiveBallPanel({ balls }: { balls: any[] }) {
         <div className="display text-[2.75rem] font-black leading-none text-[#f5e89c] md:text-[4.25rem]">
           {latestDeliveryLabel(balls)}
         </div>
-      </div>
-      <div className="text-2xl font-extrabold tracking-[0.18em] text-[#f5e89c]">Ball</div>
-      <div className="mt-3 text-sm text-white/75 md:text-base">
-        {latestDeliverySummary(balls)}
       </div>
     </div>
   );
