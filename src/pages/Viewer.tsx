@@ -73,6 +73,13 @@ const Viewer = () => {
   const isLive = match.status === "live";
   const isPaused = match.status === "paused";
   const currentInningsBalls = balls.filter((ball) => ball.innings_number === innings.innings_number);
+  const currentBatters = buildBattingCards(currentInningsBalls, innings.striker, innings.non_striker);
+  const currentBowler = buildBowlingCard(currentInningsBalls, innings.bowler);
+  const partnership = buildPartnership(currentInningsBalls, innings.striker, innings.non_striker);
+  const lastWicket = findLastWicket(currentInningsBalls);
+  const commentary = buildCommentary(currentInningsBalls);
+  const projectedScores = buildProjectedScores(innings.runs, innings.balls);
+  const momentum = innings.target ? computeMomentum(innings.runs, innings.balls, innings.target, ballsLeft) : 100;
 
   // Result text
   let resultText = "";
@@ -192,21 +199,116 @@ const Viewer = () => {
           </TabsContent>
 
           <TabsContent value="live" className="mt-4">
-            <div className="glass rounded-2xl p-4 md:p-6">
-              <div className="grid gap-6 lg:grid-cols-[1fr_auto_1fr] lg:items-center rounded-2xl border border-white/10 bg-[#0e2032] p-6 md:p-8">
-                <div className="space-y-1">
-                  <div className="text-xs uppercase tracking-widest text-muted-foreground">Batters</div>
-                  <div className="font-semibold text-lg">{renderName(innings.striker) || "—"} <span className="text-accent">*</span></div>
-                  <div className="text-muted-foreground text-base">{renderName(innings.non_striker) || "—"}</div>
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.85fr)]">
+              <section className="glass rounded-2xl p-4 md:p-6">
+                <div className="grid gap-6 xl:grid-cols-[1fr_auto_1fr] xl:items-center rounded-2xl border border-white/10 bg-[#0e2032] p-6 md:p-8">
+                  <div className="grid grid-cols-[auto_1fr] gap-4 items-end">
+                    <PlayerCard name={innings.striker} score={currentBatters[0]} active />
+                    <div className="min-w-0">
+                      <div className="text-sm text-muted-foreground">Striker</div>
+                      <div className="font-semibold text-lg truncate">{renderName(innings.striker) || "—"} <span className="text-accent">*</span></div>
+                      <div className="mono text-sm text-muted-foreground">
+                        {currentBatters[0] ? `${currentBatters[0].runs} (${currentBatters[0].balls})` : "0 (0)"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <LiveBallPanel balls={currentInningsBalls} />
+
+                  <div className="grid grid-cols-[auto_1fr] gap-4 items-end justify-self-end text-left xl:text-right">
+                    <div className="order-2 xl:order-1 min-w-0">
+                      <div className="text-sm text-muted-foreground">Non-striker</div>
+                      <div className="font-semibold text-lg truncate">{renderName(innings.non_striker) || "—"}</div>
+                      <div className="mono text-sm text-muted-foreground">
+                        {currentBatters[1] ? `${currentBatters[1].runs} (${currentBatters[1].balls})` : "0 (0)"}
+                      </div>
+                    </div>
+                    <PlayerCard name={innings.non_striker} score={currentBatters[1]} />
+                  </div>
                 </div>
 
-                <LiveBallPanel balls={currentInningsBalls} />
-
-                <div className="space-y-1 text-left lg:text-right">
-                  <div className="text-xs uppercase tracking-widest text-muted-foreground">Bowler</div>
-                  <div className="font-semibold text-lg">{renderName(innings.bowler) || "—"}</div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3 text-sm">
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs uppercase tracking-widest text-muted-foreground">P'ship</div>
+                    <div className="display text-xl mt-1">{partnership.runs || 0} ({partnership.balls || 0})</div>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs uppercase tracking-widest text-muted-foreground">Last Wkt</div>
+                    <div className="font-semibold mt-1 truncate">{lastWicket || "—"}</div>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs uppercase tracking-widest text-muted-foreground">Bowler</div>
+                    <div className="font-semibold mt-1 truncate">{renderName(innings.bowler) || "—"}</div>
+                    <div className="mono text-sm text-muted-foreground">{currentBowler}</div>
+                  </div>
                 </div>
-              </div>
+
+                <div className="mt-6 border-t border-white/10 pt-5">
+                  <div className="flex items-center justify-between gap-3 text-xs uppercase tracking-widest text-muted-foreground mb-3">
+                    <span>This over</span>
+                    <span>{oversString(innings.balls)} ov</span>
+                  </div>
+                  <OverStrip balls={currentInningsBalls} />
+                </div>
+
+                <div className="mt-8">
+                  <h3 className="display text-2xl mb-4">Commentary</h3>
+                  <div className="flex flex-wrap gap-2 mb-5 text-sm">
+                    {["All", "Highlights", "Overs", "W", "6s", "4s", "Inn 1", "Inn 2", "Milestone"].map((chip) => (
+                      <span key={chip} className={`rounded-md border px-3 py-2 ${chip === "All" ? "border-accent/30 bg-accent/10 text-accent" : "border-white/10 bg-white/5 text-muted-foreground"}`}>
+                        {chip}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="space-y-4">
+                    {commentary.length > 0 ? commentary.map((item) => <CommentaryRow key={item.key} item={item} />) : (
+                      <p className="text-sm text-muted-foreground">Commentary will appear after the first ball.</p>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              <aside className="space-y-6">
+                <section className="glass rounded-2xl p-4 md:p-6">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="display text-xl">Probability</h3>
+                    <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-muted-foreground">Live</div>
+                  </div>
+                  <div className="mt-6">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
+                      <span>{renderName(innings.batting_team)}</span>
+                      <span>{innings.target ? `${momentum}%` : "100%"}</span>
+                    </div>
+                    <div className="h-3 overflow-hidden rounded-full bg-white/10">
+                      <div className="h-full rounded-full bg-[#2d4cd9]" style={{ width: `${innings.target ? momentum : 100}%` }} />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground">
+                      <span>{renderName(innings.batting_team)}</span>
+                      <span>{innings.target ? renderName(innings.bowling_team) : "—"}</span>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="glass rounded-2xl p-4 md:p-6">
+                  <h3 className="display text-xl mb-4">Projected Score <span className="text-sm text-muted-foreground">as per RR*</span></h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="grid grid-cols-[1fr_repeat(3,auto)] gap-4 rounded-lg bg-white/5 px-4 py-3 text-muted-foreground">
+                      <span>Run Rate</span>
+                      <span className="mono">{rr.toFixed(2)}*</span>
+                      <span className="mono">{(rr + 0.5).toFixed(2)}</span>
+                      <span className="mono">{(rr + 1).toFixed(2)}</span>
+                    </div>
+                    {projectedScores.map((row) => (
+                      <div key={row.label} className="grid grid-cols-[1fr_repeat(3,auto)] gap-4 border-t border-white/10 px-4 py-3">
+                        <span className="text-muted-foreground">{row.label}</span>
+                        <span className="mono font-semibold">{row.primary}</span>
+                        <span className="mono font-semibold">{row.secondary}</span>
+                        <span className="mono font-semibold">{row.tertiary}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </aside>
             </div>
           </TabsContent>
 
@@ -279,6 +381,127 @@ function latestDeliverySummary(balls: any[]) {
   if (lastBall.is_wicket) return `Batsman: ${lastBall.runs || 0}, ${lastBall.wicket_type ? lastBall.wicket_type.split("_").join(" ") : "Wicket"}`;
   return `Batsman: ${lastBall.runs || 0} run${(lastBall.runs || 0) === 1 ? "" : "s"}`;
 }
+
+function buildBattingCards(balls: any[], striker?: string | null, nonStriker?: string | null) {
+  const names = [striker, nonStriker].filter(Boolean) as string[];
+  return names.map((name) => {
+    let runs = 0;
+    let deliveries = 0;
+    for (const ball of balls) {
+      if (ball.striker !== name) continue;
+      if (ball.is_legal || ball.extra_type === "no_ball") deliveries += 1;
+      if (ball.extra_type !== "bye" && ball.extra_type !== "leg_bye" && ball.extra_type !== "wide") runs += ball.runs || 0;
+    }
+    return { name, runs, balls: deliveries };
+  });
+}
+
+function buildBowlingCard(balls: any[], bowler?: string | null) {
+  if (!bowler) return "0-0";
+  let runs = 0;
+  let wickets = 0;
+  let overs = 0;
+  for (const ball of balls) {
+    if (ball.bowler !== bowler) continue;
+    if (ball.is_legal) overs += 1;
+    if (ball.extra_type === "wide" || ball.extra_type === "no_ball") runs += (ball.extra_runs || 0) + (ball.extra_type === "no_ball" ? (ball.runs || 0) : 0);
+    else if (ball.extra_type === "bye" || ball.extra_type === "leg_bye") runs += 0;
+    else runs += ball.runs || 0;
+    if (ball.is_wicket) wickets += 1;
+  }
+  return `${wickets}-${runs} (${Math.floor(overs / 6)}.${overs % 6})`;
+}
+
+function buildPartnership(balls: any[], striker?: string | null, nonStriker?: string | null) {
+  const pair = new Set([striker, nonStriker].filter(Boolean));
+  let runs = 0;
+  let deliveries = 0;
+  for (let i = balls.length - 1; i >= 0; i--) {
+    const ball = balls[i];
+    if (ball.is_wicket && ball.out_player && pair.has(ball.out_player)) break;
+    if (ball.is_legal) deliveries += 1;
+    if (ball.extra_type === "wide" || ball.extra_type === "no_ball") runs += (ball.extra_runs || 0) + (ball.extra_type === "no_ball" ? (ball.runs || 0) : 0);
+    else runs += (ball.runs || 0) + (ball.extra_runs || 0);
+  }
+  return { runs, balls: deliveries };
+}
+
+function findLastWicket(balls: any[]) {
+  for (let i = balls.length - 1; i >= 0; i--) {
+    const ball = balls[i];
+    if (ball.is_wicket && ball.out_player) {
+      const over = `${ball.over_number}.${ball.ball_in_over}`;
+      return `${renderName(ball.out_player)} ${over}`;
+    }
+  }
+  return "";
+}
+
+function buildCommentary(balls: any[]) {
+  return balls
+    .slice()
+    .reverse()
+    .slice(0, 6)
+    .map((ball, index) => {
+      const delivery = `${ball.over_number}.${ball.ball_in_over}`;
+      const text = ball.commentary || `${renderName(ball.bowler) || "Bowler"} to ${renderName(ball.striker) || "batter"} — ${ballLabel(ball)}`;
+      return { key: ball.id || `${delivery}-${index}`, delivery, text };
+    })
+    .reverse();
+}
+
+function buildProjectedScores(runs: number, balls: number) {
+  const currentRR = runRate(runs, balls);
+  const projections = [15, 20].map((overs) => {
+    const estimate = Math.round(currentRR * overs);
+    return {
+      label: `${overs} Overs`,
+      primary: estimate,
+      secondary: Math.max(estimate - 1, 0),
+      tertiary: estimate + 3,
+    };
+  });
+  return projections;
+}
+
+function computeMomentum(runs: number, balls: number, target: number, ballsLeft: number) {
+  const currentRR = runRate(runs, balls);
+  const required = requiredRunRate(target, runs, ballsLeft);
+  if (!Number.isFinite(required) || required <= 0) return 100;
+  const ratio = currentRR / required;
+  return Math.max(0, Math.min(100, Math.round(50 + (ratio - 1) * 50)));
+}
+
+function PlayerCard({ name, score, active = false }: { name?: string | null; score?: { runs: number; balls: number }; active?: boolean }) {
+  const label = renderName(name) || "—";
+  const initials = label
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+  return (
+    <div className={`flex h-24 w-24 items-center justify-center rounded-full border ${active ? "border-white/10 bg-white/5" : "border-white/10 bg-white/5"} text-center`}>
+      <div className="space-y-1">
+        <div className="display text-xl text-white/80">{initials || "•"}</div>
+        <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">{score ? `${score.runs}/${score.balls}` : "0/0"}</div>
+      </div>
+    </div>
+  );
+}
+
+function CommentaryRow({ item }: { item: { delivery: string; text: string } }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <span className="mono text-base text-foreground">{item.delivery}</span>
+        <span className="h-6 w-6 rounded-full border border-white/10 bg-secondary/70 flex items-center justify-center text-xs mono">{item.delivery.split(".").pop()}</span>
+        <span className="text-muted-foreground">{item.text}</span>
+      </div>
+    </div>
+  );
+}
+
 function LiveBallPanel({ balls }: { balls: any[] }) {
   return (
     <div className="mx-auto flex h-[18rem] w-full max-w-[18rem] items-center justify-center rounded-3xl border border-white/5 bg-[#0e2032]/55 text-center shadow-[0_10px_30px_rgba(0,0,0,0.22)]">
