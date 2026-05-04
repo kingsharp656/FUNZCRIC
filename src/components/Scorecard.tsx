@@ -7,7 +7,9 @@ type Ball = {
   extra_type: string | null;
   extra_runs: number;
   is_wicket: boolean;
+  wicket_type: string | null;
   out_player: string | null;
+  new_batter?: string | null;
   striker: string | null;
   non_striker: string | null;
   bowler: string | null;
@@ -29,13 +31,15 @@ interface BowlerStat {
   wickets: number;
 }
 
+const isBowlerWicket = (wicketType: string | null) =>
+  wicketType !== null && wicketType !== "run_out";
+
 function buildBatterStats(balls: Ball[]): BatterStat[] {
   const map = new Map<string, BatterStat>();
   for (const b of balls) {
     if (b.striker) {
       const s = map.get(b.striker) || { name: b.striker, runs: 0, balls: 0, out: false };
-      // count balls only when batter is on strike and ball is legal or no-ball (no-ball faced)
-      if (b.is_legal || b.extra_type === "no_ball") s.balls += 1;
+      if (b.is_legal) s.balls += 1;
       // batter runs: only when not bye/leg-bye and not pure wide
       if (b.extra_type !== "bye" && b.extra_type !== "leg_bye" && b.extra_type !== "wide") {
         s.runs += b.runs;
@@ -63,7 +67,7 @@ function buildBowlerStats(balls: Ball[]): BowlerStat[] {
     else if (b.extra_type === "bye" || b.extra_type === "leg_bye") conceded += 0;
     else conceded += b.runs;
     s.runs += conceded;
-    if (b.is_wicket && b.out_player) s.wickets += 1;
+    if (b.is_wicket && b.out_player && isBowlerWicket(b.wicket_type)) s.wickets += 1;
     map.set(b.bowler, s);
   }
   return [...map.values()];

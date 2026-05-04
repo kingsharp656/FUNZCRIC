@@ -57,6 +57,7 @@ CREATE TABLE public.balls (
   is_wicket BOOLEAN NOT NULL DEFAULT false,
   wicket_type TEXT,
   out_player TEXT,
+  new_batter TEXT,
   striker TEXT,
   non_striker TEXT,
   bowler TEXT,

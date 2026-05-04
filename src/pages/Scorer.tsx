@@ -51,6 +51,12 @@ const Scorer = () => {
   const [wideRuns, setWideRuns] = useState(1);
   const [wideWicket, setWideWicket] = useState(false);
   const [wideNewBatter, setWideNewBatter] = useState("");
+  const [noBallOpen, setNoBallOpen] = useState(false);
+  const [noBallBatRuns, setNoBallBatRuns] = useState(0);
+  const [noBallExtraRuns, setNoBallExtraRuns] = useState(0);
+  const [noBallRunOut, setNoBallRunOut] = useState(false);
+  const [noBallOutPlayer, setNoBallOutPlayer] = useState("");
+  const [noBallNewBatter, setNoBallNewBatter] = useState("");
 
   // Load + subscribe
   const load = useCallback(async () => {
@@ -95,6 +101,9 @@ const Scorer = () => {
   const dismissedPlayers = currentInningsBalls
     .filter((ball) => ball.is_wicket && ball.out_player)
     .map((ball) => ball.out_player as string);
+  const availableSetupBatters = battingSquad.filter(
+    (player) => !dismissedPlayers.some((dismissedPlayer) => namesEqual(dismissedPlayer, player.name)),
+  );
   const availableIncomingBatters = battingSquad.filter(
     (player) =>
       !namesEqual(player.name, innings?.striker) &&
@@ -113,33 +122,37 @@ const Scorer = () => {
     lastCurrentInningsBall?.bowler === innings.bowler;
 
   useEffect(() => {
-    if (!needsBowlerChange || setupOpen || wicketOpen || byeOpen !== null || wideOpen) return;
+    if (!needsBowlerChange || setupOpen || wicketOpen || byeOpen !== null || wideOpen || noBallOpen) return;
     setNextBowler("");
     setOverBowlerOpen(true);
-  }, [needsBowlerChange, setupOpen, wicketOpen, byeOpen, wideOpen]);
+  }, [needsBowlerChange, setupOpen, wicketOpen, byeOpen, wideOpen, noBallOpen]);
 
   useEffect(() => {
     if (!setupOpen || !innings) return;
 
-    const defaultStriker = innings.striker || battingSquad[0]?.name || "";
+    const defaultStriker =
+      availableSetupBatters.some((player) => namesEqual(player.name, innings.striker))
+        ? innings.striker
+        : availableSetupBatters[0]?.name || "";
     const defaultNonStriker =
-      innings.non_striker ||
-      battingSquad.find((player) => !namesEqual(player.name, defaultStriker))?.name ||
+      availableSetupBatters.some((player) => namesEqual(player.name, innings.non_striker))
+        ? innings.non_striker
+        : availableSetupBatters.find((player) => !namesEqual(player.name, defaultStriker))?.name ||
       "";
     const defaultBowler = innings.bowler || bowlingSquad[0]?.name || "";
 
     setStriker((current) =>
-      battingSquad.some((player) => namesEqual(player.name, current)) ? current : defaultStriker,
+      availableSetupBatters.some((player) => namesEqual(player.name, current)) ? current : defaultStriker,
     );
     setNonStriker((current) =>
-      battingSquad.some((player) => namesEqual(player.name, current) && !namesEqual(player.name, striker))
+      availableSetupBatters.some((player) => namesEqual(player.name, current) && !namesEqual(player.name, striker))
         ? current
         : defaultNonStriker,
     );
     setBowler((current) =>
       bowlingSquad.some((player) => namesEqual(player.name, current)) ? current : defaultBowler,
     );
-  }, [setupOpen, innings, battingSquad, bowlingSquad, striker]);
+  }, [setupOpen, innings, availableSetupBatters, bowlingSquad, striker]);
 
   useEffect(() => {
     if (!wicketOpen || !innings) return;
@@ -162,6 +175,20 @@ const Scorer = () => {
         : availableIncomingBatters[0]?.name || "",
     );
   }, [wideOpen, wideWicket, innings, availableIncomingBatters]);
+
+  useEffect(() => {
+    if (!noBallOpen || !innings) return;
+    setNoBallOutPlayer((current) => {
+      if (namesEqual(current, innings.striker) || namesEqual(current, innings.non_striker)) return current;
+      return innings.striker || innings.non_striker || "";
+    });
+    if (!noBallRunOut) return;
+    setNoBallNewBatter((current) =>
+      availableIncomingBatters.some((player) => namesEqual(player.name, current))
+        ? current
+        : availableIncomingBatters[0]?.name || "",
+    );
+  }, [noBallOpen, noBallRunOut, innings, availableIncomingBatters]);
 
   useEffect(() => {
     if (!overBowlerOpen) return;
@@ -342,6 +369,7 @@ const Scorer = () => {
         is_wicket: ball.is_wicket,
         wicket_type: ball.wicket_type as WicketType,
         out_player: ball.out_player || undefined,
+        new_batter: ball.new_batter || undefined,
       }).state;
     }
 
@@ -390,6 +418,13 @@ const Scorer = () => {
     if (!innings) return;
     if (!striker || !nonStriker || !bowler) { toast.error("All three required"); return; }
     if (namesEqual(striker, nonStriker)) { toast.error("Striker and non-striker must differ"); return; }
+    if (
+      dismissedPlayers.some((dismissedPlayer) => namesEqual(dismissedPlayer, striker)) ||
+      dismissedPlayers.some((dismissedPlayer) => namesEqual(dismissedPlayer, nonStriker))
+    ) {
+      toast.error("Dismissed players cannot continue batting");
+      return;
+    }
     await supabase.from("innings_state").update({ striker, non_striker: nonStriker, bowler }).eq("id", innings.id);
     setInnings((current: Innings | null) => current ? {
       ...current,
@@ -451,7 +486,10 @@ const Scorer = () => {
   const ballsLeft = match.total_overs * 6 - innings.balls;
   const isPaused = match.status === "paused";
   const isEnded = match.status === "ended";
-  const scoringLocked = isPaused || needsBowlerChange;
+  const strikerDismissed = dismissedPlayers.some((dismissedPlayer) => namesEqual(dismissedPlayer, innings.striker));
+  const nonStrikerDismissed = dismissedPlayers.some((dismissedPlayer) => namesEqual(dismissedPlayer, innings.non_striker));
+  const hasDismissedActiveBatter = strikerDismissed || nonStrikerDismissed;
+  const scoringLocked = isPaused || needsBowlerChange || hasDismissedActiveBatter;
   const requiresReplacementBatter = innings.wickets < 9;
 
   return (
@@ -522,6 +560,26 @@ const Scorer = () => {
           </div>
         )}
 
+        {hasDismissedActiveBatter && !isEnded && (
+          <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold">Dismissed batter still selected</div>
+              <div className="text-sm text-muted-foreground">Choose the correct not-out batters before scoring the next ball.</div>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setStriker(strikerDismissed ? "" : innings.striker || "");
+                setNonStriker(nonStrikerDismissed ? "" : innings.non_striker || "");
+                setBowler(innings.bowler || "");
+                setSetupOpen(true);
+              }}
+            >
+              Fix batters
+            </Button>
+          </div>
+        )}
+
         {isEnded && (
           <div className="rounded-2xl border border-accent/40 bg-accent/5 p-6 text-center">
             <Trophy className="w-10 h-10 mx-auto text-accent mb-2" />
@@ -564,7 +622,21 @@ const Scorer = () => {
                 >
                   Wide
                 </Button>
-                <Button disabled={scoringLocked} variant="outline" className="scoring-btn h-14" onClick={() => score({ extra: "no_ball" })}>No Ball</Button>
+                <Button
+                  disabled={scoringLocked}
+                  variant="outline"
+                  className="scoring-btn h-14"
+                  onClick={() => {
+                    setNoBallBatRuns(0);
+                    setNoBallExtraRuns(0);
+                    setNoBallRunOut(false);
+                    setNoBallOutPlayer(innings.striker || "");
+                    setNoBallNewBatter("");
+                    setNoBallOpen(true);
+                  }}
+                >
+                  No Ball
+                </Button>
                 <Button disabled={scoringLocked} variant="outline" className="scoring-btn h-14" onClick={() => { setByeRuns(1); setByeOpen("bye"); }}>Bye</Button>
                 <Button disabled={scoringLocked} variant="outline" className="scoring-btn h-14" onClick={() => { setByeRuns(1); setByeOpen("leg_bye"); }}>Leg Bye</Button>
               </div>
@@ -624,7 +696,7 @@ const Scorer = () => {
               <Select value={striker} onValueChange={setStriker}>
                 <SelectTrigger><SelectValue placeholder="Select striker" /></SelectTrigger>
                 <SelectContent>
-                  {battingSquad.map((player) => (
+                  {availableSetupBatters.map((player) => (
                     <SelectItem key={`striker-${player.name}`} value={player.name}>{displayName(player.name)}</SelectItem>
                   ))}
                 </SelectContent>
@@ -635,7 +707,7 @@ const Scorer = () => {
               <Select value={nonStriker} onValueChange={setNonStriker}>
                 <SelectTrigger><SelectValue placeholder="Select non-striker" /></SelectTrigger>
                 <SelectContent>
-                  {battingSquad
+                  {availableSetupBatters
                     .filter((player) => !namesEqual(player.name, striker))
                     .map((player) => (
                       <SelectItem key={`non-striker-${player.name}`} value={player.name}>{displayName(player.name)}</SelectItem>
@@ -719,6 +791,89 @@ const Scorer = () => {
               });
               setWicketOpen(false);
             }}>Record wicket</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* No-ball dialog */}
+      <Dialog open={noBallOpen} onOpenChange={setNoBallOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>No ball details</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Runs from bat</Label>
+              <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                {[0, 1, 2, 3, 4, 5, 6].map((n) => (
+                  <Button key={n} variant={noBallBatRuns === n ? "default" : "outline"} className="h-12" onClick={() => setNoBallBatRuns(n)}>{n}</Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Byes / leg byes / overthrows in addition to no-ball penalty</Label>
+              <div className="grid grid-cols-5 gap-2">
+                {[0, 1, 2, 3, 4].map((n) => (
+                  <Button key={n} variant={noBallExtraRuns === n ? "default" : "outline"} className="h-12" onClick={() => setNoBallExtraRuns(n)}>{n}</Button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <Checkbox
+                id="no-ball-run-out"
+                checked={noBallRunOut}
+                onCheckedChange={(checked) => setNoBallRunOut(checked === true)}
+              />
+              <Label htmlFor="no-ball-run-out" className="cursor-pointer">
+                Run out on this no ball
+              </Label>
+            </div>
+            {noBallRunOut && (
+              <div className="space-y-3">
+                <div>
+                  <Label>Out player</Label>
+                  <Select value={noBallOutPlayer} onValueChange={setNoBallOutPlayer}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {innings.striker && <SelectItem value={innings.striker}>{displayName(innings.striker)} (striker)</SelectItem>}
+                      {innings.non_striker && <SelectItem value={innings.non_striker}>{displayName(innings.non_striker)} (non-striker)</SelectItem>}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {requiresReplacementBatter && (
+                  <div>
+                    <Label>New batter walking in</Label>
+                    <Select value={noBallNewBatter} onValueChange={setNoBallNewBatter}>
+                      <SelectTrigger><SelectValue placeholder="Select next batter" /></SelectTrigger>
+                      <SelectContent>
+                        {availableIncomingBatters.map((player) => (
+                          <SelectItem key={`no-ball-new-batter-${player.name}`} value={player.name}>{displayName(player.name)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="rounded-lg bg-secondary/40 px-3 py-2 text-sm">
+              Total added: <span className="mono font-bold">{1 + noBallBatRuns + noBallExtraRuns}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={async () => {
+              if (noBallRunOut && requiresReplacementBatter && !noBallNewBatter.trim()) {
+                toast.error("Select the new batter");
+                return;
+              }
+              await score({
+                runs: noBallBatRuns,
+                extra: "no_ball",
+                extra_runs: 1 + noBallExtraRuns,
+                is_wicket: noBallRunOut,
+                wicket_type: noBallRunOut ? "run_out" : undefined,
+                out_player: noBallRunOut ? noBallOutPlayer : undefined,
+                new_batter: noBallRunOut && requiresReplacementBatter ? noBallNewBatter.trim() : undefined,
+              });
+              setNoBallOpen(false);
+            }}>Confirm</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -842,9 +997,12 @@ function getTeamSquad(match: Match | null, teamName?: string | null): TeamPlayer
 }
 function ballLabel(b: any) {
   if (b.extra_type === "wide" && b.is_wicket) return `Wd${b.extra_runs > 1 ? `+${b.extra_runs - 1}` : ""}W`;
-  if (b.is_wicket) return "W";
   if (b.extra_type === "wide") return `Wd${b.extra_runs > 1 ? `+${b.extra_runs - 1}` : ""}`;
-  if (b.extra_type === "no_ball") return `Nb${b.runs ? `+${b.runs}` : ""}`;
+  if (b.extra_type === "no_ball") {
+    const extrasBeyondPenalty = Math.max(0, (b.extra_runs || 1) - 1);
+    return `Nb${b.runs ? `+${b.runs}` : ""}${extrasBeyondPenalty ? `+${extrasBeyondPenalty}ex` : ""}${b.is_wicket ? "W" : ""}`;
+  }
+  if (b.is_wicket) return "W";
   if (b.extra_type === "bye") return `${b.extra_runs}b`;
   if (b.extra_type === "leg_bye") return `${b.extra_runs}lb`;
   return String(b.runs);

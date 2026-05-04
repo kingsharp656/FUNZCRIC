@@ -1,0 +1,2 @@
+ALTER TABLE public.balls
+ADD COLUMN IF NOT EXISTS new_batter TEXT;

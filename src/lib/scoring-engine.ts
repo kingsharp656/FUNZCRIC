@@ -25,7 +25,7 @@ export interface InningsState {
 export interface BallInput {
   runs: number; // batter runs (0..6)
   extra?: ExtraType;
-  extra_runs?: number; // additional runs from byes/leg byes (wide/no-ball already include 1)
+  extra_runs?: number; // extras credited to team, including wide/no-ball penalty
   is_wicket?: boolean;
   wicket_type?: WicketType;
   out_player?: string; // defaults to striker
@@ -41,6 +41,7 @@ export interface BallOutcome {
     is_wicket: boolean;
     wicket_type: string | null;
     out_player: string | null;
+    new_batter: string | null;
     striker: string;
     non_striker: string;
     bowler: string;
@@ -48,12 +49,19 @@ export interface BallOutcome {
   };
 }
 
+const namesMatch = (left?: string | null, right?: string | null) =>
+  !!left && !!right && left.trim().toLowerCase() === right.trim().toLowerCase();
+
+const canBeOutOnNoBall = (wicketType?: WicketType) => wicketType === "run_out";
+
 /** Apply one ball to an innings state and return the next state + a log row. */
 export function applyBall(prev: InningsState, ball: BallInput): BallOutcome {
   const next: InningsState = { ...prev };
   let totalRunsThisBall = ball.runs ?? 0;
   let extraRuns = 0;
   let isLegal = true;
+  let isWicket = !!ball.is_wicket;
+  let wicketType = ball.wicket_type ?? null;
 
   if (ball.extra === "wide" || ball.extra === "no_ball") {
     // Wide/no-ball can include additional extra runs (for overthrows, running, etc.)
@@ -64,25 +72,33 @@ export function applyBall(prev: InningsState, ball: BallInput): BallOutcome {
     totalRunsThisBall = 0; // byes/leg byes don't go to batter
   }
 
+  if (ball.extra === "no_ball" && isWicket && !canBeOutOnNoBall(ball.wicket_type)) {
+    isWicket = false;
+    wicketType = null;
+  }
+
   next.runs = prev.runs + totalRunsThisBall + extraRuns;
   next.extras = prev.extras + extraRuns;
 
   // Wicket
-  if (ball.is_wicket) {
+  if (isWicket) {
     next.wickets = prev.wickets + 1;
     if (ball.new_batter) {
       // out player walks off, new batter takes their place at striker end
       const outPlayer = ball.out_player || prev.striker;
-      if (outPlayer === prev.striker) next.striker = ball.new_batter;
-      else next.non_striker = ball.new_batter;
+      if (namesMatch(outPlayer, prev.striker)) next.striker = ball.new_batter;
+      else if (namesMatch(outPlayer, prev.non_striker)) next.non_striker = ball.new_batter;
     }
   }
 
-  // Strike rotation: odd batter runs swap. Byes/leg byes also rotate on odd.
-  const rotateRuns =
-    ball.extra === "bye" || ball.extra === "leg_bye" || ball.extra === "wide"
-      ? extraRuns
-      : ball.runs ?? 0;
+  // Strike rotation follows runs physically completed, excluding wide/no-ball penalty.
+  const rotateRuns = (() => {
+    if (ball.extra === "bye" || ball.extra === "leg_bye") return extraRuns;
+    if (ball.extra === "wide" || ball.extra === "no_ball") {
+      return Math.max(0, extraRuns - 1) + (ball.extra === "no_ball" ? ball.runs ?? 0 : 0);
+    }
+    return ball.runs ?? 0;
+  })();
   if (rotateRuns % 2 === 1) {
     const tmp = next.striker;
     next.striker = next.non_striker;
@@ -106,9 +122,10 @@ export function applyBall(prev: InningsState, ball: BallInput): BallOutcome {
       runs: ball.runs ?? 0,
       extra_type: ball.extra ?? null,
       extra_runs: extraRuns,
-      is_wicket: !!ball.is_wicket,
-      wicket_type: ball.wicket_type ?? null,
-      out_player: ball.is_wicket ? ball.out_player || prev.striker : null,
+      is_wicket: isWicket,
+      wicket_type: wicketType,
+      out_player: isWicket ? ball.out_player || prev.striker : null,
+      new_batter: isWicket ? ball.new_batter ?? null : null,
       striker: prev.striker,
       non_striker: prev.non_striker,
       bowler: prev.bowler,

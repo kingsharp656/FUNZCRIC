@@ -27,6 +27,7 @@ export type Database = {
           is_legal: boolean
           is_wicket: boolean
           match_id: string
+          new_batter: string | null
           non_striker: string | null
           out_player: string | null
           over_number: number
@@ -46,6 +47,7 @@ export type Database = {
           is_legal?: boolean
           is_wicket?: boolean
           match_id: string
+          new_batter?: string | null
           non_striker?: string | null
           out_player?: string | null
           over_number: number
@@ -65,6 +67,7 @@ export type Database = {
           is_legal?: boolean
           is_wicket?: boolean
           match_id?: string
+          new_batter?: string | null
           non_striker?: string | null
           out_player?: string | null
           over_number?: number

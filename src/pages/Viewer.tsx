@@ -321,9 +321,12 @@ const Viewer = () => {
 
 function ballLabel(b: any) {
   if (b.extra_type === "wide" && b.is_wicket) return `Wd${b.extra_runs > 1 ? `+${b.extra_runs - 1}` : ""}W`;
-  if (b.is_wicket) return "W";
   if (b.extra_type === "wide") return `Wd${b.extra_runs > 1 ? `+${b.extra_runs - 1}` : ""}`;
-  if (b.extra_type === "no_ball") return `Nb${b.runs ? `+${b.runs}` : ""}`;
+  if (b.extra_type === "no_ball") {
+    const extrasBeyondPenalty = Math.max(0, (b.extra_runs || 1) - 1);
+    return `Nb${b.runs ? `+${b.runs}` : ""}${extrasBeyondPenalty ? `+${extrasBeyondPenalty}ex` : ""}${b.is_wicket ? "W" : ""}`;
+  }
+  if (b.is_wicket) return "W";
   if (b.extra_type === "bye") return `${b.extra_runs}b`;
   if (b.extra_type === "leg_bye") return `${b.extra_runs}lb`;
   return String(b.runs);
@@ -372,7 +375,8 @@ function latestDeliverySummary(balls: any[]) {
   if (lastBall.extra_type === "no_ball") {
     const extraRuns = lastBall.extra_runs || 1;
     const batterRuns = lastBall.runs || 0;
-    return `Batsman: ${batterRuns}, no ball ${extraRuns + batterRuns} run${extraRuns + batterRuns === 1 ? "" : "s"}`;
+    const wicketText = lastBall.is_wicket ? `, ${lastBall.wicket_type?.split("_").join(" ") || "wicket"}` : "";
+    return `Batsman: ${batterRuns}, no ball ${extraRuns + batterRuns} run${extraRuns + batterRuns === 1 ? "" : "s"}${wicketText}`;
   }
   if (lastBall.extra_type === "bye") return `Batsman: 0, ${lastBall.extra_runs} bye${lastBall.extra_runs === 1 ? "" : "s"}`;
   if (lastBall.extra_type === "leg_bye") return `Batsman: 0, ${lastBall.extra_runs} leg bye${lastBall.extra_runs === 1 ? "" : "s"}`;
@@ -387,7 +391,7 @@ function buildBattingCards(balls: any[], striker?: string | null, nonStriker?: s
     let deliveries = 0;
     for (const ball of balls) {
       if (ball.striker !== name) continue;
-      if (ball.is_legal || ball.extra_type === "no_ball") deliveries += 1;
+      if (ball.is_legal) deliveries += 1;
       if (ball.extra_type !== "bye" && ball.extra_type !== "leg_bye" && ball.extra_type !== "wide") runs += ball.runs || 0;
     }
     return { name, runs, balls: deliveries };
@@ -405,7 +409,7 @@ function buildBowlingCard(balls: any[], bowler?: string | null) {
     if (ball.extra_type === "wide" || ball.extra_type === "no_ball") runs += (ball.extra_runs || 0) + (ball.extra_type === "no_ball" ? (ball.runs || 0) : 0);
     else if (ball.extra_type === "bye" || ball.extra_type === "leg_bye") runs += 0;
     else runs += ball.runs || 0;
-    if (ball.is_wicket) wickets += 1;
+    if (ball.is_wicket && ball.wicket_type !== "run_out") wickets += 1;
   }
   return `${wickets}-${runs} (${Math.floor(overs / 6)}.${overs % 6})`;
 }
