@@ -641,6 +641,55 @@ const Scorer = () => {
                 <Button disabled={scoringLocked} variant="outline" className="scoring-btn h-14" onClick={() => { setByeRuns(1); setByeOpen("leg_bye"); }}>Leg Bye</Button>
               </div>
 
+              {/* No-ball runs */}
+              <div className="rounded-lg border bg-secondary/20 p-3 space-y-2">
+                <div className="text-xs uppercase tracking-widest text-muted-foreground">No ball runs from bat</div>
+                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                  {[0, 1, 2, 3, 4, 5, 6].map((r) => (
+                    <Button
+                      key={`nb-${r}`}
+                      disabled={scoringLocked}
+                      variant="outline"
+                      className="scoring-btn h-12"
+                      onClick={() => score({ runs: r, extra: "no_ball", extra_runs: 1 })}
+                    >
+                      NB+{r}
+                    </Button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    disabled={scoringLocked}
+                    variant="outline"
+                    className="scoring-btn h-12"
+                    onClick={() => {
+                      setNoBallBatRuns(0);
+                      setNoBallExtraRuns(0);
+                      setNoBallRunOut(false);
+                      setNoBallOutPlayer(innings.striker || "");
+                      setNoBallNewBatter("");
+                      setNoBallOpen(true);
+                    }}
+                  >
+                    More NB runs
+                  </Button>
+                  <Button
+                    disabled={scoringLocked}
+                    className="scoring-btn h-12 bg-ball text-ball-foreground hover:bg-ball/90"
+                    onClick={() => {
+                      setNoBallBatRuns(0);
+                      setNoBallExtraRuns(0);
+                      setNoBallRunOut(true);
+                      setNoBallOutPlayer(innings.striker || "");
+                      setNoBallNewBatter("");
+                      setNoBallOpen(true);
+                    }}
+                  >
+                    NB Run Out
+                  </Button>
+                </div>
+              </div>
+
               {/* Wicket + Undo */}
               <div className="grid grid-cols-2 gap-2">
                 <Button disabled={scoringLocked} className="scoring-btn h-14 bg-ball text-ball-foreground hover:bg-ball/90"
