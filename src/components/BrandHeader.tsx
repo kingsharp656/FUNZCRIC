@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import logo from "@/assets/funzquick-logo.png";
 import { renderName } from "@/lib/admin-name";
 
 export const BrandHeader = () => {
+  const logo = "/favicon.png";
+
   return (
     <header className="sticky top-0 z-40 w-full glass border-b">
       <div className="container flex h-16 items-center justify-between">

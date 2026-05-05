@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { BrandHeader } from "@/components/BrandHeader";
-import logo from "@/assets/funzquick-logo.png";
 import { Activity, BarChart3, Trophy, Users, Zap, Share2 } from "lucide-react";
 import { renderName } from "@/lib/admin-name";
 
@@ -13,6 +12,8 @@ const features = [
 ];
 
 const Index = () => {
+  const logo = "/favicon.png";
+
   return (
     <div className="min-h-screen">
       <BrandHeader />
