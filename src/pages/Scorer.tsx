@@ -7,14 +7,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Copy, Loader2, Undo2, Trophy, Pause, Play } from "lucide-react";
 import { applyBall, oversString, runRate, type ExtraType, type WicketType } from "@/lib/scoring-engine";
 import { renderName, displayName } from "@/lib/admin-name";
-import { Scorecard } from "@/components/Scorecard";
-import { RunRateChart } from "@/components/RunRateChart";
 import { getBowlingSquad, namesEqual, normalizeTeamPlayers, type TeamPlayer } from "@/lib/team-roster";
 
 type Match = any;
@@ -589,134 +586,69 @@ const Scorer = () => {
 
         {/* Scoring controls */}
         {!isEnded && (
-          <Tabs defaultValue="score">
-            <TabsList className="grid grid-cols-3 w-full">
-              <TabsTrigger value="score">Score</TabsTrigger>
-              <TabsTrigger value="card">Scorecard</TabsTrigger>
-              <TabsTrigger value="rr">Run Rate</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="score" className="space-y-4 mt-4">
-              {/* Runs */}
-              <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                {[0, 1, 2, 3, 4, 5, 6].map((r) => (
-                  <Button key={r} disabled={scoringLocked} onClick={() => score({ runs: r })}
-                    className={`scoring-btn h-16 ${r === 4 ? "bg-accent text-accent-foreground hover:bg-accent/90" : r === 6 ? "bg-gradient-to-br from-accent to-accent-glow text-accent-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}>
-                    {r}
-                  </Button>
-                ))}
-              </div>
-
-              {/* Extras */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <Button
-                  disabled={scoringLocked}
-                  variant="outline"
-                  className="scoring-btn h-14"
-                  onClick={() => {
-                    setWideRuns(1);
-                    setWideWicket(false);
-                    setWideNewBatter("");
-                    setWideOpen(true);
-                  }}
-                >
-                  Wide
+          <div className="space-y-4">
+            {/* Runs */}
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+              {[0, 1, 2, 3, 4, 5, 6].map((r) => (
+                <Button key={r} disabled={scoringLocked} onClick={() => score({ runs: r })}
+                  className={`scoring-btn h-16 ${r === 4 ? "bg-accent text-accent-foreground hover:bg-accent/90" : r === 6 ? "bg-gradient-to-br from-accent to-accent-glow text-accent-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}>
+                  {r}
                 </Button>
-                <Button
-                  disabled={scoringLocked}
-                  variant="outline"
-                  className="scoring-btn h-14"
-                  onClick={() => {
-                    setNoBallBatRuns(0);
-                    setNoBallExtraRuns(0);
-                    setNoBallRunOut(false);
-                    setNoBallOutPlayer(innings.striker || "");
-                    setNoBallNewBatter("");
-                    setNoBallOpen(true);
-                  }}
-                >
-                  No Ball
-                </Button>
-                <Button disabled={scoringLocked} variant="outline" className="scoring-btn h-14" onClick={() => { setByeRuns(1); setByeOpen("bye"); }}>Bye</Button>
-                <Button disabled={scoringLocked} variant="outline" className="scoring-btn h-14" onClick={() => { setByeRuns(1); setByeOpen("leg_bye"); }}>Leg Bye</Button>
-              </div>
+              ))}
+            </div>
 
-              {/* No-ball runs */}
-              <div className="rounded-lg border bg-secondary/20 p-3 space-y-2">
-                <div className="text-xs uppercase tracking-widest text-muted-foreground">No ball runs from bat</div>
-                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                  {[0, 1, 2, 3, 4, 5, 6].map((r) => (
-                    <Button
-                      key={`nb-${r}`}
-                      disabled={scoringLocked}
-                      variant="outline"
-                      className="scoring-btn h-12"
-                      onClick={() => score({ runs: r, extra: "no_ball", extra_runs: 1 })}
-                    >
-                      NB+{r}
-                    </Button>
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    disabled={scoringLocked}
-                    variant="outline"
-                    className="scoring-btn h-12"
-                    onClick={() => {
-                      setNoBallBatRuns(0);
-                      setNoBallExtraRuns(0);
-                      setNoBallRunOut(false);
-                      setNoBallOutPlayer(innings.striker || "");
-                      setNoBallNewBatter("");
-                      setNoBallOpen(true);
-                    }}
-                  >
-                    More NB runs
-                  </Button>
-                  <Button
-                    disabled={scoringLocked}
-                    className="scoring-btn h-12 bg-ball text-ball-foreground hover:bg-ball/90"
-                    onClick={() => {
-                      setNoBallBatRuns(0);
-                      setNoBallExtraRuns(0);
-                      setNoBallRunOut(true);
-                      setNoBallOutPlayer(innings.striker || "");
-                      setNoBallNewBatter("");
-                      setNoBallOpen(true);
-                    }}
-                  >
-                    NB Run Out
-                  </Button>
-                </div>
-              </div>
-
-              {/* Wicket + Undo */}
-              <div className="grid grid-cols-2 gap-2">
-                <Button disabled={scoringLocked} className="scoring-btn h-14 bg-ball text-ball-foreground hover:bg-ball/90"
-                  onClick={() => { setOutPlayer(innings.striker || ""); setWicketRuns(0); setNewBatter(""); setWicketType("bowled"); setWicketOpen(true); }}>
-                  WICKET
-                </Button>
-                <Button variant="outline" className="scoring-btn h-14" onClick={undoLast}>
-                  <Undo2 className="w-4 h-4 mr-2" /> Undo last
-                </Button>
-              </div>
-
-              <Button variant="ghost" size="sm" className="w-full" onClick={() => {
-                setStriker(innings.striker || ""); setNonStriker(innings.non_striker || ""); setBowler(innings.bowler || "");
-                setSetupOpen(true);
-              }}>
-                Change batters / bowler
+            {/* Extras */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <Button
+                disabled={scoringLocked}
+                variant="outline"
+                className="scoring-btn h-14"
+                onClick={() => {
+                  setWideRuns(1);
+                  setWideWicket(false);
+                  setWideNewBatter("");
+                  setWideOpen(true);
+                }}
+              >
+                Wide
               </Button>
-            </TabsContent>
+              <Button
+                disabled={scoringLocked}
+                variant="outline"
+                className="scoring-btn h-14"
+                onClick={() => {
+                  setNoBallBatRuns(0);
+                  setNoBallExtraRuns(0);
+                  setNoBallRunOut(false);
+                  setNoBallOutPlayer(innings.striker || "");
+                  setNoBallNewBatter("");
+                  setNoBallOpen(true);
+                }}
+              >
+                No Ball
+              </Button>
+              <Button disabled={scoringLocked} variant="outline" className="scoring-btn h-14" onClick={() => { setByeRuns(1); setByeOpen("bye"); }}>Bye</Button>
+              <Button disabled={scoringLocked} variant="outline" className="scoring-btn h-14" onClick={() => { setByeRuns(1); setByeOpen("leg_bye"); }}>Leg Bye</Button>
+            </div>
 
-            <TabsContent value="card" className="mt-4">
-              <Scorecard balls={balls} />
-            </TabsContent>
+            {/* Wicket + Undo */}
+            <div className="grid grid-cols-2 gap-2">
+              <Button disabled={scoringLocked} className="scoring-btn h-14 bg-ball text-ball-foreground hover:bg-ball/90"
+                onClick={() => { setOutPlayer(innings.striker || ""); setWicketRuns(0); setNewBatter(""); setWicketType("bowled"); setWicketOpen(true); }}>
+                WICKET
+              </Button>
+              <Button variant="outline" className="scoring-btn h-14" onClick={undoLast}>
+                <Undo2 className="w-4 h-4 mr-2" /> Undo last
+              </Button>
+            </div>
 
-            <TabsContent value="rr" className="mt-4">
-              <RunRateChart data={overSeries(balls.filter(b => b.innings_number === innings.innings_number))} />
-            </TabsContent>
-          </Tabs>
+            <Button variant="ghost" size="sm" className="w-full" onClick={() => {
+              setStriker(innings.striker || ""); setNonStriker(innings.non_striker || ""); setBowler(innings.bowler || "");
+              setSetupOpen(true);
+            }}>
+              Change batters / bowler
+            </Button>
+          </div>
         )}
 
         {/* Recent balls */}
@@ -850,7 +782,7 @@ const Scorer = () => {
           <DialogHeader><DialogTitle>No ball details</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Runs from bat</Label>
+              <Label>Runs scored on this no ball</Label>
               <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                 {[0, 1, 2, 3, 4, 5, 6].map((n) => (
                   <Button key={n} variant={noBallBatRuns === n ? "default" : "outline"} className="h-12" onClick={() => setNoBallBatRuns(n)}>{n}</Button>
@@ -903,7 +835,7 @@ const Scorer = () => {
               </div>
             )}
             <div className="rounded-lg bg-secondary/40 px-3 py-2 text-sm">
-              Total added: <span className="mono font-bold">{1 + noBallBatRuns + noBallExtraRuns}</span>
+              No ball total: <span className="mono font-bold">{1 + noBallBatRuns + noBallExtraRuns}</span>
             </div>
           </div>
           <DialogFooter>
@@ -1056,18 +988,4 @@ function ballLabel(b: any) {
   if (b.extra_type === "leg_bye") return `${b.extra_runs}lb`;
   return String(b.runs);
 }
-function overSeries(balls: any[]) {
-  const points: { over: number; runs: number }[] = [];
-  let runs = 0, legal = 0;
-  for (const b of balls) {
-    if (b.extra_type === "wide" || b.extra_type === "no_ball") runs += b.extra_runs + (b.extra_type === "no_ball" ? b.runs : 0);
-    else runs += b.runs + b.extra_runs;
-    if (b.is_legal) {
-      legal += 1;
-      if (legal % 6 === 0) points.push({ over: legal / 6, runs });
-    }
-  }
-  return points;
-}
-
 export default Scorer;
